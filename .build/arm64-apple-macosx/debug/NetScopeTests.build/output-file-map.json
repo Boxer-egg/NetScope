@@ -1,0 +1,26 @@
+{
+  "": {
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/master.swiftdeps"
+  },
+  "/Users/box/new/Mac/NetScope/Tests/NetScopeTests/ConnectionPollerTests.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionPollerTests.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionPollerTests.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionPollerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionPollerTests.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionPollerTests.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Tests/NetScopeTests/ConnectionStoreTests.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionStoreTests.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionStoreTests.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionStoreTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionStoreTests.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/ConnectionStoreTests.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Tests/NetScopeTests/TracerouteRunnerTests.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/TracerouteRunnerTests.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/TracerouteRunnerTests.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/TracerouteRunnerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/TracerouteRunnerTests.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScopeTests.build/TracerouteRunnerTests.dia"
+  }
+}

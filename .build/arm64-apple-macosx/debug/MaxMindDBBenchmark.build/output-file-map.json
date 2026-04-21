@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/MaxMindDBBenchmark.build/master.swiftdeps"
+  },
+  "/Users/box/new/Mac/NetScope/.build/checkouts/maxminddb-swift/Benchmarks/MaxMindDBBenchmark/main.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/MaxMindDBBenchmark.build/main.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/MaxMindDBBenchmark.build/main.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/MaxMindDBBenchmark.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/MaxMindDBBenchmark.build/main.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/MaxMindDBBenchmark.build/main.dia"
+  }
+}

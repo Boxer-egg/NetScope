@@ -1,0 +1,16 @@
+/Users/box/new/Mac/NetScope/Sources/NetScope/App/NetScopeApp.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Data/ConnectionPoller.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Data/GeoDatabase.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Data/TracerouteRunner.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Models/Connection.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Models/GeoInfo.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Models/TracerouteHop.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Stores/AppStore.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Stores/ConnectionStore.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Stores/TracerouteStore.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Views/DetailPanelView.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Views/MainWindowView.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Views/MapContainerView.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Views/ProcessListView.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Views/SetupView.swift
+/Users/box/new/Mac/NetScope/Sources/NetScope/Views/TracerouteView.swift

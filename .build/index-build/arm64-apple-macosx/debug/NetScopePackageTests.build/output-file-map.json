@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/NetScopePackageTests.build/master.swiftdeps"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/NetScopePackageTests.derived/runner.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/NetScopePackageTests.build/runner.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/NetScopePackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/NetScopePackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/NetScopePackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/NetScopePackageTests.build/runner.dia"
+  }
+}

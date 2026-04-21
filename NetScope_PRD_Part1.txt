@@ -1,0 +1,354 @@
+NetScope
+macOS Network Connection Monitor
+Product Requirements Document · Part 1 of 3
+
+属性
+内容
+文档版本
+v1.0
+覆盖范围
+Part 1 — 产品概述 · 整体架构 · Phase 1 MVP
+技术栈
+Swift / SwiftUI · MapKit · lsof · MaxMind GeoLite2
+目标平台
+macOS 13 Ventura+
+文档状态
+草稿，供实施参考
+
+1. 产品概述
+1.1 产品定位
+NetScope 是一款 macOS 菜单栏应用，实时监控本机所有进程的网络连接，并将每条连接的目标 IP 地址在世界地图上可视化展示。用户可以一眼看出哪些应用正在向哪里通信，并对任意一条连接发起 Traceroute，逐跳追踪网络路径。
+
+定位
+类 Little Snitch 的连接可视化工具，但聚焦于「可视化观察」而非「规则防火墙」，上手零门槛。
+
+1.2 核心价值主张
+	•	直观：连接以弧线投影到世界地图，一秒内理解流量去向
+	•	透明：进程级粒度，知道是哪个 App 在连接哪台服务器
+	•	深度：内置 Traceroute，可视化路由路径上的每一跳延迟
+	•	离线：IP 地理位置解析基于本地 MaxMind GeoLite2 数据库，无隐私顾虑
+
+1.3 用户画像
+用户类型
+典型需求
+使用场景
+开发者 / 后端工程师
+了解自己应用的实际连接情况
+调试 API 调用、确认 CDN 节点
+安全研究员
+发现异常外联行为
+排查可疑进程、审计第三方 SDK
+网络工程师
+路由路径分析
+诊断高延迟、定位中间节点问题
+隐私意识用户
+了解各 App 的数据流向
+评估应用隐私风险
+
+2. 整体架构
+2.1 技术选型（已确定）
+模块
+选型
+理由
+连接数据采集
+lsof -i 轮询（1秒间隔）
+MVP 无需系统扩展权限，快速可用
+地图渲染
+MapKit（原生）
+内置世界地图、卫星图，流畅，SwiftUI 原生支持
+路由追踪
+/usr/sbin/traceroute
+系统内置，无需第三方依赖，直接 Process() 调起解析
+IP 地理位置
+MaxMind GeoLite2（本地）
+离线解析，无隐私风险，数据库每月更新
+UI 框架
+SwiftUI + AppKit 混合
+SwiftUI 做界面，AppKit 处理菜单栏 NSStatusItem
+
+2.2 模块架构图（文字描述）
+系统分为四层，从底层到上层依次为：
+
+	•	数据采集层（Data Collection Layer）
+	•	ConnectionPoller：每秒执行 lsof -nP -iTCP -iUDP，解析输出得到进程名、PID、本地端口、远端 IP、连接状态
+	•	TracerouteRunner：按需启动 /usr/sbin/traceroute，流式读取每跳输出，逐行解析 IP 和 RTT
+
+	•	地理解析层（Geo Resolution Layer）
+	•	GeoDatabase：封装 MaxMind GeoLite2-City.mmdb，提供 lookup(ip: String) -> GeoInfo?，返回经纬度、城市、国家、ASN
+	•	IPCache：LRU 缓存，避免重复查询同一 IP
+
+	•	状态管理层（State Layer）
+	•	ConnectionStore：ObservableObject，持有当前所有活跃连接的列表；负责去重、合并、统计流量
+	•	TracerouteStore：持有当前选中连接的 traceroute 逐跳结果
+
+	•	UI 展示层（Presentation Layer）
+	•	MenuBarController：NSStatusItem，显示连接数气泡，点击弹出主窗口
+	•	MainWindow：三栏布局 — 进程列表 / 地图视图 / 详情面板
+	•	MapView：MapKit MKMapView，绘制弧线连接和 IP 位置 Annotation
+
+2.3 数据流
+步骤
+动作
+输出
+1
+ConnectionPoller 每秒触发
+原始连接列表（进程 + IP + 端口 + 状态）
+2
+GeoDatabase.lookup(ip)
+GeoInfo（经纬度、城市、国家）
+3
+ConnectionStore 更新
+@Published connections 触发 UI 刷新
+4
+MapView 响应
+绘制新增连接弧线，移除已断开连接的弧线
+5
+用户点击进程
+过滤地图，只显示该进程的连接
+6
+用户点击「Traceroute」
+TracerouteRunner 启动，逐跳结果流式更新 UI
+
+2.4 目录结构（推荐）
+建议 Xcode 项目的 Group 结构如下：
+
+NetScope/
+├── App/               # AppDelegate, MenuBarController
+├── Data/
+│   ├── ConnectionPoller.swift
+│   ├── TracerouteRunner.swift
+│   └── GeoDatabase.swift
+├── Models/
+│   ├── Connection.swift
+│   ├── GeoInfo.swift
+│   └── TracerouteHop.swift
+├── Stores/
+│   ├── ConnectionStore.swift
+│   └── TracerouteStore.swift
+├── Views/
+│   ├── MainWindowView.swift
+│   ├── ProcessListView.swift
+│   ├── MapContainerView.swift
+│   ├── DetailPanelView.swift
+│   └── TracerouteView.swift
+├── Resources/
+│   └── GeoLite2-City.mmdb
+└── Supporting Files/
+
+3. Phase 1 — MVP 功能规格
+范围
+Phase 1 目标：用最少的代码实现完整的「看连接 + 看地图 + 看 Traceroute」核心链路，确保可用、稳定、无崩溃。
+
+3.1 菜单栏入口
+功能描述
+	•	应用以 Agent 模式运行（LSUIElement = YES），无 Dock 图标
+	•	菜单栏显示网络图标 + 当前活跃连接总数
+	•	点击图标弹出主窗口（非 popover，使用独立 NSWindow）
+	•	连接数每秒刷新
+
+技术要点
+	•	Info.plist 设置 LSUIElement = YES
+	•	NSStatusItem with NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+	•	图标使用 SF Symbol network 系列，支持深色模式自动适配
+
+3.2 进程列表面板
+功能描述
+	•	左栏显示所有有活跃网络连接的进程，按连接数降序排列
+	•	每个进程显示：应用图标（NSWorkspace 获取）、进程名、PID、当前连接数
+	•	点击进程 → 地图和详情面板过滤到该进程
+	•	顶部「All Processes」选项，显示全部连接
+	•	列表实时更新，新进程出现时自动插入
+
+数据模型
+字段
+类型
+来源
+说明
+processName
+String
+lsof COMMAND 列
+进程名，截断到 15 字符
+pid
+Int
+lsof PID 列
+进程 ID
+connections
+[Connection]
+ConnectionStore
+该进程所有活跃连接
+icon
+NSImage?
+NSWorkspace
+应用图标，可能为 nil
+
+3.3 世界地图面板
+功能描述
+	•	使用 MapKit 渲染世界地图，初始视角为全球俯瞰（region = 世界范围）
+	•	用户当前位置（或固定为本机 IP 对应城市）显示为蓝色脉冲原点
+	•	每条活跃连接，从原点到目标 IP 的地理位置画一条曲线弧（Bezier 曲线叠加在地图上）
+	•	连线颜色按进程分配（最多 12 种固定颜色循环）
+	•	目标 IP 位置显示为小圆点 Annotation，点击展示 IP、城市、国家
+	•	选中某进程时，仅该进程的连线高亮，其余灰显
+
+MapKit 实现要点
+	•	使用 MKMapView 包装在 NSViewRepresentable 中供 SwiftUI 使用
+	•	弧线通过 MKOverlay + MKOverlayRenderer 绘制，使用 UIBezierPath / NSBezierPath
+	•	Bezier 控制点：取起终点中点，向上偏移一定距离（模拟弧度）
+	•	Annotation 使用自定义 MKAnnotationView，显示 IP 信息气泡
+	•	连接变化时批量 add/remove overlay，避免每秒全量重绘
+
+3.4 详情面板
+功能描述
+	•	右栏，默认显示选中进程（或 All）的连接列表
+	•	每条连接显示：远端 IP、城市/国家、端口、协议（TCP/UDP）、连接状态
+	•	点击某条连接 → 下方展开 Traceroute 子面板
+	•	顶部显示该进程的流量统计（当前连接数、目标国家去重数）
+
+连接数据模型
+字段
+类型
+来源
+说明
+remoteIP
+String
+lsof
+远端 IP 地址
+remotePort
+Int
+lsof
+远端端口
+localPort
+Int
+lsof
+本地端口
+proto
+String
+lsof TYPE 列
+TCP / UDP
+state
+String
+lsof STATE 列
+ESTABLISHED / LISTEN 等
+geoInfo
+GeoInfo?
+GeoDatabase
+经纬度、城市、国家、ASN
+
+3.5 Traceroute 子面板
+功能描述
+	•	用户在详情面板点击任意连接后，面板底部展开 Traceroute 区域
+	•	自动启动 /usr/sbin/traceroute -n -m 20 <target_ip>
+	•	每解析到一跳，实时追加到列表（流式更新，无需等待完成）
+	•	每跳显示：跳数、IP 地址、地理位置、RTT（取三次测量的平均值）
+	•	同时在地图上将该次 Traceroute 的路径叠加为橙色虚线弧链
+	•	Traceroute 完成后显示「Done · 共 N 跳 · 总延迟 X ms」
+	•	支持「重新测量」按钮
+
+TracerouteRunner 实现要点
+	•	使用 Process() 启动 /usr/sbin/traceroute，Pipe() 捕获 stdout
+	•	在后台线程读取 Pipe，用 NotificationCenter 或 AsyncStream 传给 Store
+	•	每行解析 Regex：(\d+)\s+([\d.]+)\s+([\d.]+) ms
+	•	超时跳（* * *）显示为「timeout」，不中断后续
+	•	同一时刻只允许一个 Traceroute 进程运行，新请求取消旧进程
+
+3.6 lsof 采集器规格
+命令
+/usr/sbin/lsof -nP -iTCP -iUDP -sTCP:ESTABLISHED,LISTEN
+
+输出解析
+	•	按空格 / 制表符分列，取第 1（COMMAND）、2（PID）、9（NAME）列
+	•	NAME 列格式：local_addr:port->remote_addr:port，解析出 remoteIP + remotePort
+	•	过滤 remoteIP 为本地回环（127.*、::1）和局域网（10.*、192.168.*、172.16-31.*）的连接
+	•	lsof 每秒以 Process() 执行一次，在后台 DispatchQueue 运行，不阻塞主线程
+
+性能边界
+指标
+目标值
+备注
+单次 lsof 执行时间
+< 200ms
+通常 50-100ms，超时则跳过本次
+最大显示连接数
+500 条
+超出时按进程活跃度截断
+内存占用
+< 80MB
+包含 GeoLite2 数据库加载
+地图 Overlay 更新频率
+1秒批量
+增量 diff，不全量重绘
+
+3.7 GeoLite2 集成规格
+数据库文件
+	•	将 GeoLite2-City.mmdb 打包进 App Bundle 的 Resources 目录
+	•	用户需自行从 MaxMind 官网注册免费账号下载（License 限制不可随 App 分发）
+	•	首次启动检测文件是否存在，不存在则显示引导界面提示用户放置文件
+
+Swift 封装
+	•	使用 MaxMind 官方 Swift 库：MaxMindDB-swift 或 swift-mmdb
+	•	提供同步 lookup 接口，调用方在后台线程调用
+	•	LRU Cache 容量 2000 条，覆盖绝大多数常见 IP
+
+GeoInfo 模型
+字段
+类型
+说明
+latitude
+Double
+纬度
+longitude
+Double
+经度
+city
+String?
+城市名（可能为空）
+country
+String
+国家名
+countryCode
+String
+ISO 3166-1 alpha-2
+asn
+String?
+自治系统名称（如 Amazon, Google）
+
+4. Phase 1 验收标准
+原则
+以下所有条目均为 must-have，Phase 1 上线前必须全部满足。
+
+编号
+验收条目
+验证方法
+AC-01
+应用启动后在菜单栏出现图标，5秒内开始显示连接数
+手动启动，等待观察
+AC-02
+进程列表正确显示至少 3 个有网络连接的进程
+对比 lsof -i 命令输出
+AC-03
+地图上出现连线弧，起点在本机位置，终点在目标 IP 位置
+目视检查
+AC-04
+点击进程后地图过滤到该进程连接，其余变灰
+手动点击验证
+AC-05
+点击连接后 Traceroute 面板展开，逐行出现跳数信息
+手动点击，等待输出
+AC-06
+Traceroute 路径在地图上以橙色虚线显示
+目视检查
+AC-07
+应用在后台运行 30 分钟后内存 < 80MB
+用 Instruments 测量
+AC-08
+连接 100 条以上时 UI 不卡顿（帧率 > 30fps）
+连接 VPN 或大量服务时测试
+AC-09
+不存在 GeoLite2 数据库时，显示引导页而非崩溃
+删除 mmdb 文件后启动
+AC-10
+关闭主窗口后应用仍在菜单栏运行，不退出
+关闭窗口后观察
+
+
+NetScope PRD · Part 1 of 3 · 下一文档：Part 2 — Phase 2 功能 & UI 规格

@@ -1,0 +1,103 @@
+{
+  "": {
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/master.swiftdeps"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Caching/MaxMindDBReaderConfig.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReaderConfig.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReaderConfig.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReaderConfig~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReaderConfig.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReaderConfig.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Caching/NodeCache.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/NodeCache.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/NodeCache.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/NodeCache~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/NodeCache.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/NodeCache.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Core/DataType.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/DataType.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/DataType.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/DataType~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/DataType.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/DataType.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Core/MaxMindDBDecoder.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBDecoder.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBDecoder.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBDecoder~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBDecoder.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBDecoder.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Core/MaxMindDBReader.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReader.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReader.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReader~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReader.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBReader.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Core/Parser.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Parser.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Parser.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Parser~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Parser.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Parser.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Core/RawReader.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/RawReader.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/RawReader.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/RawReader~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/RawReader.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/RawReader.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Models/MaxMindDBMetadata.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBMetadata.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBMetadata.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBMetadata~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBMetadata.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBMetadata.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Models/Model.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Model.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Model.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Model~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Model.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Model.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Networking/IPAddress.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/IPAddress.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/IPAddress.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/IPAddress~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/IPAddress.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/IPAddress.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Networking/Network.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Network.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Network.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Network~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Network.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Network.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Networking/Networks.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Networks.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Networks.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Networks~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Networks.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/Networks.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Utilities/MaxMindDBError.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBError.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBError.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBError~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBError.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/MaxMindDBError.dia"
+  },
+  "/Users/box/new/Mac/NetScope/.build/index-build/checkouts/maxminddb-swift/Sources/MaxMindDB/Utilities/UInt128.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/UInt128.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/UInt128.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/UInt128~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/UInt128.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/index-build/arm64-apple-macosx/debug/MaxMindDB.build/UInt128.dia"
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "": {
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/master.swiftdeps"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/App/NetScopeApp.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/NetScopeApp.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/NetScopeApp.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/NetScopeApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/NetScopeApp.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/NetScopeApp.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Data/ConnectionPoller.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionPoller.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionPoller.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionPoller~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionPoller.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionPoller.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Data/GeoDatabase.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoDatabase.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoDatabase.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoDatabase~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoDatabase.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoDatabase.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Data/TracerouteRunner.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteRunner.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteRunner.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteRunner~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteRunner.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteRunner.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Models/Connection.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/Connection.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/Connection.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/Connection~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/Connection.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/Connection.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Models/GeoInfo.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoInfo.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoInfo.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoInfo~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoInfo.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/GeoInfo.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Models/TracerouteHop.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteHop.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteHop.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteHop~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteHop.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteHop.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Stores/AppStore.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/AppStore.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/AppStore.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/AppStore~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/AppStore.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/AppStore.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Stores/ConnectionStore.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionStore.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionStore.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionStore~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionStore.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ConnectionStore.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Stores/TracerouteStore.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteStore.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteStore.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteStore~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteStore.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteStore.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Views/DetailPanelView.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/DetailPanelView.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/DetailPanelView.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/DetailPanelView~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/DetailPanelView.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/DetailPanelView.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Views/MainWindowView.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MainWindowView.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MainWindowView.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MainWindowView~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MainWindowView.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MainWindowView.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Views/MapContainerView.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MapContainerView.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MapContainerView.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MapContainerView~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MapContainerView.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/MapContainerView.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Views/ProcessListView.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ProcessListView.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ProcessListView.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ProcessListView~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ProcessListView.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/ProcessListView.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Views/SetupView.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/SetupView.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/SetupView.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/SetupView~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/SetupView.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/SetupView.dia"
+  },
+  "/Users/box/new/Mac/NetScope/Sources/NetScope/Views/TracerouteView.swift": {
+    "dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteView.d",
+    "object": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteView.swift.o",
+    "swiftmodule": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteView~partial.swiftmodule",
+    "swift-dependencies": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteView.swiftdeps",
+    "diagnostics": "/Users/box/new/Mac/NetScope/.build/arm64-apple-macosx/debug/NetScope.build/TracerouteView.dia"
+  }
+}
