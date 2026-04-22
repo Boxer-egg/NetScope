@@ -3,7 +3,8 @@ import Foundation
 /// Checks if an IP address is in a private/non-routable range.
 func isPrivateIP(_ ip: String) -> Bool {
     if ip == "*" || ip.isEmpty { return true }
-    if ip == "::1" || ip == "localhost" || ip == "127.0.0.1" || ip == "0.0.0.0" { return true }
+    if ip == "::1" || ip == "localhost" { return true }
+    if ip == "127.0.0.1" || ip == "0.0.0.0" { return true }
     if ip.hasPrefix("10.") || ip.hasPrefix("192.168.") || ip.hasPrefix("169.254.") { return true }
     if ip.hasPrefix("172.") {
         let parts = ip.split(separator: ".")
