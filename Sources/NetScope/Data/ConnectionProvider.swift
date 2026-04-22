@@ -8,6 +8,7 @@ class ConnectionProvider: ObservableObject {
     private let sources: [ConnectionSource]
 
     init(sources: [ConnectionSource]) {
+        precondition(!sources.isEmpty, "ConnectionProvider requires at least one source")
         self.sources = sources
         self.activeSource = sources.first!
     }
@@ -20,6 +21,7 @@ class ConnectionProvider: ObservableObject {
     }
 
     func stop() {
+        activeSource.onUpdate = nil
         activeSource.stop()
     }
 
