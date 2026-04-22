@@ -25,7 +25,8 @@ class AppStore: ObservableObject {
         }
 
         let nettopSource = NettopConnectionSource(interval: 1.0)
-        self.provider = ConnectionProvider(sources: [nettopSource])
+        let nwsSource = NetworkStatisticsSource()
+        self.provider = ConnectionProvider(sources: [nettopSource, nwsSource])
 
         provider.onUpdate = { [weak self] connections in
             Task { @MainActor in
