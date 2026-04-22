@@ -42,8 +42,7 @@ class AppStore: ObservableObject {
 
     func switchDataSource(to name: String) {
         provider.switchTo(sourceNamed: name)
-        connectionStore.connections = []
-        connectionStore.selectProcess(nil)
+        connectionStore.reset()
     }
 
     var availableDataSources: [String] {
