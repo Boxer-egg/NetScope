@@ -1,21 +1,22 @@
 # NetScope
 
-macOS Network Connection Monitor — A menu bar app that visualizes all process network connections on a world map.
+macOS network connection monitor with interactive world map visualization. See which apps are talking to which servers, where they are, and trace the network path.
 
 ## Features
 
-- **Real-time monitoring**: Polls `lsof` every second to show all active TCP/UDP connections
-- **Process-level granularity**: See which apps are connecting to which servers
-- **World map visualization**: Connections drawn as arcs on MapKit with target IP locations
-- **Built-in Traceroute**: Trace network paths with per-hop latency and geographic visualization
-- **Offline-first GeoIP**: Uses local MaxMind GeoLite2 database (falls back to ip-api.com if unavailable)
-- **Menu bar app**: Runs as agent (no Dock icon), shows connection count in status bar
+- **Real-time monitoring**: Polls `nettop` every second for live TCP/UDP connections
+- **Process-level detail**: Friendly process names matching Activity Monitor / Dock
+- **World map visualization**: Quadratic Bezier curves drawn on MapKit showing connection paths
+- **Immersive layout**: Full-screen map with sliding left/right panels (process list + connection details)
+- **Built-in Traceroute**: Per-hop latency and geographic visualization
+- **GeoIP lookup**: Local MaxMind GeoLite2 database with online fallback (ip-api.com)
+- **Auto-setup**: Drag-and-drop MMDB file or enter MaxMind license key to auto-download
 
 ## Requirements
 
 - macOS 13 Ventura+
-- Xcode 15+ (for building)
-- Swift 6.0+
+- Xcode 15+
+- Swift 5.9+
 
 ## Building
 
@@ -23,52 +24,49 @@ macOS Network Connection Monitor — A menu bar app that visualizes all process 
 swift build
 ```
 
-Or open `Package.swift` in Xcode and build from there.
+Or open `Package.swift` in Xcode.
 
-To create a runnable `.app` bundle:
+To create a release binary:
 
 ```bash
 swift build -c release
-# The binary will be at .build/release/NetScope
+# Binary at .build/release/NetScope
 ```
 
 ## GeoLite2 Database Setup
 
-NetScope works out of the box using the online ip-api.com fallback, but for full offline privacy, download the MaxMind GeoLite2-City database:
+On first launch, a setup sheet appears with two options:
 
-### Option 1: Manual Download
+1. **Drag & Drop**: Download `GeoLite2-City.mmdb` from [MaxMind](https://www.maxmind.com/en/geolite2/signup) and drop it into the setup view
+2. **License Key**: Enter your MaxMind Account ID + License Key to auto-download and extract the database
 
-1. Register a free account at [MaxMind](https://www.maxmind.com/en/geolite2/signup)
-2. Log in and go to "Download Files"
-3. Download **GeoLite2-City.mmdb** (MMDB format)
-4. Place it at:
-   ```
-   ~/Library/Application Support/NetScope/GeoLite2-City.mmdb
-   ```
-
-### Option 2: Using geoipupdate (Recommended for keeping updated)
-
-1. Install `geoipupdate`:
-   ```bash
-   brew install geoipupdate
-   ```
-2. Create `/usr/local/etc/GeoIP.conf` with your AccountID and LicenseKey from MaxMind
-3. Run `geoipupdate` to download databases
-4. Copy or symlink the database:
-   ```bash
-   mkdir -p ~/Library/Application\ Support/NetScope
-   cp /usr/local/share/GeoIP/GeoLite2-City.mmdb ~/Library/Application\ Support/NetScope/
-   ```
+The database is saved to `~/Library/Application Support/NetScope/GeoLite2-City.mmdb`.
 
 ## Architecture
 
 ```
-NetScope/
-├── App/                    # AppDelegate, MenuBarController
-├── Models/                 # Connection, GeoInfo, TracerouteHop
-├── Data/                   # ConnectionPoller, TracerouteRunner, GeoDatabase
-├── Stores/                 # ConnectionStore, TracerouteStore
-└── Views/                  # SwiftUI views
+Sources/NetScope/
+├── App/
+│   └── NetScopeApp.swift          # App lifecycle, MenuBar, window management
+├── Models/
+│   ├── Connection.swift           # Network connection model
+│   ├── GeoInfo.swift              # GeoIP location data
+│   └── TracerouteHop.swift        # Traceroute hop model
+├── Data/
+│   ├── ConnectionPoller.swift     # nettop parser & background polling
+│   ├── GeoDatabase.swift          # MaxMind DB reader + online fallback
+│   └── TracerouteRunner.swift     # ICMP traceroute execution
+├── Stores/
+│   ├── AppStore.swift             # Global app state coordinator
+│   ├── ConnectionStore.swift      # Connection aggregation & geo lookup
+│   └── TracerouteStore.swift      # Traceroute state management
+└── Views/
+    ├── MainWindowView.swift       # ZStack overlay layout with sliding panels
+    ├── MapContainerView.swift     # MKMapView representable with Bezier curves
+    ├── ProcessListView.swift      # Left panel: process list with traffic stats
+    ├── DetailPanelView.swift      # Right panel: summary, states, hosts, connections
+    ├── SetupView.swift            # First-run onboarding (drag-drop / license key)
+    └── TracerouteView.swift       # Traceroute result display
 ```
 
 ## Testing
@@ -76,21 +74,6 @@ NetScope/
 ```bash
 swift test
 ```
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| Cmd+R | Manual refresh connections |
-| Cmd+F | Focus process search |
-| Cmd+, | Open Preferences |
-| Escape | Clear selection, show All |
-| Cmd+T | Traceroute selected connection |
-| Cmd+Shift+M | Toggle map type |
-
-## Distribution
-
-Phase 1 is distributed as a direct `.app` bundle (not Mac App Store due to `lsof` sandbox restrictions).
 
 ## License
 
