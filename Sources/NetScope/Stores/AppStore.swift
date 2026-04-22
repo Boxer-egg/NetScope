@@ -9,7 +9,7 @@ class AppStore: ObservableObject {
     @Published var tracerouteStore = TracerouteStore()
     @Published var isFirstRun: Bool = false
 
-    private let poller = ConnectionPoller(interval: 1.0)
+    private let poller = NettopConnectionSource(interval: 1.0)
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
