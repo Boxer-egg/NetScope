@@ -109,7 +109,7 @@ struct SetupView: View {
                 installDatabase(from: url)
             } else {
                 DispatchQueue.main.async {
-                    self.errorMessage = "Please drop the correct GeoLite2-City.mmdb file."
+                    self.errorMessage = String(localized: "Please drop the correct GeoLite2-City.mmdb file.", bundle: .module)
                 }
             }
         }
@@ -140,7 +140,7 @@ struct SetupView: View {
             }
         } catch {
             DispatchQueue.main.async {
-                self.errorMessage = "Failed to copy file: \(error.localizedDescription)"
+                self.errorMessage = String(format: String(localized: "Failed to copy file: %@", bundle: .module), error.localizedDescription)
             }
         }
     }
@@ -158,7 +158,7 @@ struct SetupView: View {
             URLQueryItem(name: "suffix", value: "tar.gz")
         ]
         guard let url = components.url else {
-            errorMessage = "Invalid download URL"
+            errorMessage = String(localized: "Invalid download URL", bundle: .module)
             isDownloading = false
             return
         }
@@ -169,7 +169,7 @@ struct SetupView: View {
 
                 guard let httpResponse = response as? HTTPURLResponse else {
                     throw NSError(domain: "NetScope", code: 1,
-                                  userInfo: [NSLocalizedDescriptionKey: "Invalid server response"])
+                                  userInfo: [NSLocalizedDescriptionKey: String(localized: "Invalid server response", bundle: .module)])
                 }
 
                 switch httpResponse.statusCode {
@@ -177,16 +177,16 @@ struct SetupView: View {
                     break
                 case 401:
                     throw NSError(domain: "NetScope", code: 1,
-                                  userInfo: [NSLocalizedDescriptionKey: "Invalid license key. Please verify your MaxMind account and key."])
+                                  userInfo: [NSLocalizedDescriptionKey: String(localized: "Invalid license key. Please verify your MaxMind account and key.", bundle: .module)])
                 default:
                     throw NSError(domain: "NetScope", code: 1,
-                                  userInfo: [NSLocalizedDescriptionKey: "Download failed (HTTP \(httpResponse.statusCode)). Please try again."])
+                                  userInfo: [NSLocalizedDescriptionKey: String(format: String(localized: "Download failed (HTTP %d). Please try again.", bundle: .module), httpResponse.statusCode)])
                 }
 
                 // Validate that data is a tar.gz (magic number: 1f 8b)
                 guard data.count > 2, data[0] == 0x1f, data[1] == 0x8b else {
                     throw NSError(domain: "NetScope", code: 1,
-                                  userInfo: [NSLocalizedDescriptionKey: "Downloaded file is not a valid archive. Check your license key."])
+                                  userInfo: [NSLocalizedDescriptionKey: String(localized: "Downloaded file is not a valid archive. Check your license key.", bundle: .module)])
                 }
 
                 let tempDir = FileManager.default.temporaryDirectory
@@ -204,7 +204,7 @@ struct SetupView: View {
 
                 guard tarTask.terminationStatus == 0 else {
                     throw NSError(domain: "NetScope", code: 2,
-                                  userInfo: [NSLocalizedDescriptionKey: "Failed to extract archive"])
+                                  userInfo: [NSLocalizedDescriptionKey: String(localized: "Failed to extract archive", bundle: .module)])
                 }
 
                 var mmdbURL: URL?
@@ -218,7 +218,7 @@ struct SetupView: View {
 
                 guard let source = mmdbURL else {
                     throw NSError(domain: "NetScope", code: 3,
-                                  userInfo: [NSLocalizedDescriptionKey: "Database file not found in downloaded archive"])
+                                  userInfo: [NSLocalizedDescriptionKey: String(localized: "Database file not found in downloaded archive", bundle: .module)])
                 }
 
                 let appSupport = FileManager.default.homeDirectoryForCurrentUser
@@ -241,7 +241,7 @@ struct SetupView: View {
                 let hasDB = await GeoDatabase.shared.hasLocalDatabase()
                 guard hasDB else {
                     throw NSError(domain: "NetScope", code: 4,
-                                  userInfo: [NSLocalizedDescriptionKey: "Database saved but could not be loaded. Please restart the app."])
+                                  userInfo: [NSLocalizedDescriptionKey: String(localized: "Database saved but could not be loaded. Please restart the app.", bundle: .module)])
                 }
 
                 await MainActor.run {

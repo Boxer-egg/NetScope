@@ -7,14 +7,14 @@ struct TracerouteView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
-                Text("Traceroute to \(store.targetIP)")
+                Text(String(format: String(localized: "Traceroute to %@", bundle: .module), store.targetIP))
                     .font(.system(size: 12, weight: .medium))
                 Spacer()
                 if store.isRunning {
                     ProgressView()
                         .controlSize(.small)
                 } else if store.isComplete {
-                    Text("Done · \(store.totalHops) hops · \(formatRTT(store.totalRTT))")
+                    Text(String(format: String(localized: "Done · %d hops · %@", bundle: .module), store.totalHops, formatRTT(store.totalRTT)))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }

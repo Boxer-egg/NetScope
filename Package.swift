@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "NetScope",
+    defaultLocalization: "en",
     platforms: [.macOS(.v13)],
     products: [
         .executable(name: "NetScope", targets: ["NetScope"])

@@ -286,30 +286,35 @@ struct ConnectionListSection: View {
                 .font(.system(size: 12, weight: .semibold))
 
             ForEach(store.filteredConnections) { conn in
-                VStack(spacing: 0) {
-                    ConnectionRow(
-                        connection: conn,
-                        color: store.colorForProcess(conn.processName),
-                        isExpanded: selectedConnectionID == conn.id
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if selectedConnectionID == conn.id {
-                            selectedConnectionID = nil
-                            tracerouteStore.clear()
-                        } else {
-                            selectedConnectionID = conn.id
-                            tracerouteStore.startTraceroute(for: conn)
-                        }
-                    }
+                connectionItem(for: conn)
+            }
+        }
+    }
 
-                    if selectedConnectionID == conn.id {
-                        TracerouteView()
-                            .environmentObject(tracerouteStore)
-                            .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)),
-                                                    removal: .opacity))
-                    }
+    @ViewBuilder
+    private func connectionItem(for conn: Connection) -> some View {
+        VStack(spacing: 0) {
+            ConnectionRow(
+                connection: conn,
+                color: store.colorForProcess(conn.processName),
+                isExpanded: selectedConnectionID == conn.id
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if selectedConnectionID == conn.id {
+                    selectedConnectionID = nil
+                    tracerouteStore.clear()
+                } else {
+                    selectedConnectionID = conn.id
+                    tracerouteStore.startTraceroute(for: conn)
                 }
+            }
+
+            if selectedConnectionID == conn.id {
+                TracerouteView()
+                    .environmentObject(tracerouteStore)
+                    .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)),
+                                            removal: .opacity))
             }
         }
     }

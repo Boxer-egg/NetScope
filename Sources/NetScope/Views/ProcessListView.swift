@@ -4,6 +4,7 @@ import AppKit
 struct ProcessListView: View {
     @EnvironmentObject var store: ConnectionStore
     @State private var searchText = ""
+    @State private var expandedProcesses: Set<String> = []
 
     var filteredProcesses: [(name: String, pid: Int, count: Int, colorIndex: Int)] {
         let processes = store.processes
@@ -11,6 +12,18 @@ struct ProcessListView: View {
             return processes
         }
         return processes.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    func toggleExpanded(_ name: String) {
+        if expandedProcesses.contains(name) {
+            expandedProcesses.remove(name)
+        } else {
+            expandedProcesses.insert(name)
+        }
+    }
+
+    func connections(for processName: String) -> [Connection] {
+        store.connections.filter { $0.processName == processName }
     }
 
     var body: some View {
@@ -58,15 +71,24 @@ struct ProcessListView: View {
             // Process list
             List {
                 ForEach(filteredProcesses, id: \.name) { proc in
-                    Button(action: { store.selectProcess(proc.name) }) {
+                    VStack(spacing: 0) {
                         ProcessRow(
                             name: proc.name,
                             count: proc.count,
                             color: store.processColorsList[proc.colorIndex % store.processColorsList.count],
-                            isSelected: store.selectedProcess == proc.name
+                            isSelected: store.selectedProcess == proc.name,
+                            isExpanded: expandedProcesses.contains(proc.name),
+                            onToggleExpand: { toggleExpanded(proc.name) },
+                            onSelect: { store.selectProcess(proc.name) }
                         )
+
+                        if expandedProcesses.contains(proc.name) {
+                            let conns = connections(for: proc.name)
+                            ForEach(conns) { conn in
+                                ProcessConnectionRow(connection: conn)
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 }
@@ -83,6 +105,9 @@ struct ProcessRow: View {
     let count: Int
     let color: String
     let isSelected: Bool
+    let isExpanded: Bool
+    let onToggleExpand: () -> Void
+    let onSelect: () -> Void
 
     @EnvironmentObject var store: ConnectionStore
 
@@ -98,7 +123,16 @@ struct ProcessRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
+            // Expand/collapse chevron
+            Button(action: onToggleExpand) {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .frame(width: 16, height: 28)
+            }
+            .buttonStyle(.plain)
+
             AppIconView(processName: name)
                 .frame(width: 28, height: 28)
                 .cornerRadius(6)
@@ -139,6 +173,9 @@ struct ProcessRow: View {
             : nil,
             alignment: .leading
         )
+        .onTapGesture {
+            onSelect()
+        }
     }
 
     private func formatCompactRate(_ bytes: Int64) -> String {
@@ -146,6 +183,32 @@ struct ProcessRow: View {
         if kb < 0.1 { return "0 B/s" }
         else if kb < 1024.0 { return String(format: "%.0f KB/s", kb) }
         else { return String(format: "%.1f MB/s", kb / 1024.0) }
+    }
+}
+
+struct ProcessConnectionRow: View {
+    let connection: Connection
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "globe")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .frame(width: 16)
+
+            Text(connection.remoteIP)
+                .font(.system(size: 12))
+                .lineLimit(1)
+
+            Spacer()
+
+            Text("\(connection.remotePort)")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .padding(.leading, 36)
     }
 }
 

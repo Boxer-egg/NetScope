@@ -12,7 +12,7 @@ struct NetScopeApp: App {
         }
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About NetScope") {
+                Button(String(localized: "About NetScope", bundle: .module)) {
                     NSApp.orderFrontStandardAboutPanel(nil)
                 }
             }
@@ -27,6 +27,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Regular policy: visible in Dock and Command+Tab, plus menu bar icon
         NSApp.setActivationPolicy(.regular)
+        NSApp.applicationIconImage = AppIconGenerator.generate()
+        NSApp.dockTile.display()
         menuBarController = MenuBarController()
         // Auto-show window on launch
         menuBarController?.showWindow()
@@ -98,19 +100,19 @@ final class MenuBarController: NSObject, ObservableObject {
     private func showContextMenu(_ sender: NSStatusBarButton) {
         let menu = NSMenu()
 
-        let openItem = NSMenuItem(title: "Open NetScope", action: #selector(toggleWindow), keyEquivalent: "")
+        let openItem = NSMenuItem(title: String(localized: "Open NetScope", bundle: .module), action: #selector(toggleWindow), keyEquivalent: "")
         openItem.target = self
         menu.addItem(openItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let prefsItem = NSMenuItem(title: "Preferences…", action: #selector(showPreferences), keyEquivalent: ",")
+        let prefsItem = NSMenuItem(title: String(localized: "Preferences…", bundle: .module), action: #selector(showPreferences), keyEquivalent: ",")
         prefsItem.target = self
         menu.addItem(prefsItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit NetScope", action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: String(localized: "Quit NetScope", bundle: .module), action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -147,14 +149,15 @@ final class MenuBarController: NSObject, ObservableObject {
             .frame(minWidth: 900, minHeight: 560)
 
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 720),
+            contentRect: NSRect(x: 0, y: 0, width: 1400, height: 900),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window?.title = "NetScope"
+        window?.title = String(localized: "NetScope", bundle: .module)
         window?.contentView = NSHostingView(rootView: contentView)
         window?.minSize = NSSize(width: 900, height: 560)
+        window?.setContentSize(NSSize(width: 1400, height: 900))
         window?.isReleasedWhenClosed = false
         window?.center()
         window?.makeKeyAndOrderFront(nil)
