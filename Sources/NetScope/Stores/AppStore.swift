@@ -9,37 +9,44 @@ class AppStore: ObservableObject {
     @Published var tracerouteStore = TracerouteStore()
     @Published var isFirstRun: Bool = false
 
-    private let poller = NettopConnectionSource(interval: 1.0)
+    private let provider: ConnectionProvider
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
-        // Synchronously check file existence to avoid async race with setup flow
         let dbPath = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/NetScope/GeoLite2-City.mmdb")
         let fileExists = FileManager.default.fileExists(atPath: dbPath.path)
         self.isFirstRun = !fileExists
 
-        // Async load database if file exists
         if fileExists {
             Task {
                 await GeoDatabase.shared.loadDatabase()
             }
         }
 
-        // Configure poller callback
-        // The callback runs on a background Task within ConnectionPoller,
-        // so we must hop back to MainActor to update the store.
-        poller.onUpdate = { [weak self] connections in
+        let nettopSource = NettopConnectionSource(interval: 1.0)
+        self.provider = ConnectionProvider(sources: [nettopSource])
+
+        provider.onUpdate = { [weak self] connections in
             Task { @MainActor in
                 self?.connectionStore.update(with: connections)
             }
         }
 
-        // Start the background polling task
-        poller.start()
+        provider.start()
     }
 
     func stopPolling() {
-        poller.stop()
+        provider.stop()
+    }
+
+    func switchDataSource(to name: String) {
+        provider.switchTo(sourceNamed: name)
+        connectionStore.connections = []
+        connectionStore.selectProcess(nil)
+    }
+
+    var availableDataSources: [String] {
+        provider.availableSources
     }
 }
