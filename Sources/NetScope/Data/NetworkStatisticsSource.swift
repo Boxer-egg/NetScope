@@ -54,26 +54,31 @@ class NetworkStatisticsSource: ConnectionSource {
         return connections
     }
 
-    private func parseConnectionSnapshot(_ snapshot: AnyObject) -> Connection? {
-        let pid = (snapshot.perform(NSSelectorFromString("pid"))?.takeUnretainedValue() as? NSNumber)?.intValue ?? 0
+    private func value<T>(from obj: AnyObject, selector: String, as type: T.Type) -> T? {
+        let sel = NSSelectorFromString(selector)
+        guard obj.responds(to: sel) else { return nil }
+        return obj.perform(sel)?.takeUnretainedValue() as? T
+    }
 
-        let processName = (snapshot.perform(NSSelectorFromString("processName"))?.takeUnretainedValue() as? String)
-            ?? (snapshot.perform(NSSelectorFromString("comm"))?.takeUnretainedValue() as? String)
+    private func parseConnectionSnapshot(_ snapshot: AnyObject) -> Connection? {
+        let pid = (value(from: snapshot, selector: "pid", as: NSNumber.self))?.intValue ?? 0
+
+        let processName = (value(from: snapshot, selector: "processName", as: String.self))
+            ?? (value(from: snapshot, selector: "comm", as: String.self))
             ?? "Unknown"
 
-        let localAddress = (snapshot.perform(NSSelectorFromString("localAddress"))?.takeUnretainedValue() as? String) ?? ""
-        let localPort = (snapshot.perform(NSSelectorFromString("localPort"))?.takeUnretainedValue() as? NSNumber)?.intValue ?? 0
+        let localPort = (value(from: snapshot, selector: "localPort", as: NSNumber.self))?.intValue ?? 0
 
-        let remoteAddress = (snapshot.perform(NSSelectorFromString("remoteAddress"))?.takeUnretainedValue() as? String) ?? ""
-        let remotePort = (snapshot.perform(NSSelectorFromString("remotePort"))?.takeUnretainedValue() as? NSNumber)?.intValue ?? 0
+        let remoteAddress = (value(from: snapshot, selector: "remoteAddress", as: String.self)) ?? ""
+        let remotePort = (value(from: snapshot, selector: "remotePort", as: NSNumber.self))?.intValue ?? 0
 
-        let bytesIn = (snapshot.perform(NSSelectorFromString("bytesIn"))?.takeUnretainedValue() as? NSNumber)?.int64Value ?? 0
-        let bytesOut = (snapshot.perform(NSSelectorFromString("bytesOut"))?.takeUnretainedValue() as? NSNumber)?.int64Value ?? 0
+        let bytesIn = (value(from: snapshot, selector: "bytesIn", as: NSNumber.self))?.int64Value ?? 0
+        let bytesOut = (value(from: snapshot, selector: "bytesOut", as: NSNumber.self))?.int64Value ?? 0
 
-        let state = (snapshot.perform(NSSelectorFromString("state"))?.takeUnretainedValue() as? String) ?? "Unknown"
+        let state = (value(from: snapshot, selector: "state", as: String.self)) ?? "Unknown"
 
-        let proto = (snapshot.perform(NSSelectorFromString("protocol"))?.takeUnretainedValue() as? String)
-            ?? (snapshot.perform(NSSelectorFromString("networkProtocol"))?.takeUnretainedValue() as? String)
+        let proto = (value(from: snapshot, selector: "protocol", as: String.self))
+            ?? (value(from: snapshot, selector: "networkProtocol", as: String.self))
             ?? "TCP"
 
         return Connection(
