@@ -49,4 +49,8 @@ class AppStore: ObservableObject {
     var availableDataSources: [String] {
         provider.availableSources
     }
+
+    var currentDataSource: String {
+        provider.activeSource.displayName
+    }
 }
