@@ -13,8 +13,18 @@ class AppStore: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
-        // Check if database exists to determine if we need onboarding
-        checkDatabaseStatus()
+        // Synchronously check file existence to avoid async race with setup flow
+        let dbPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/NetScope/GeoLite2-City.mmdb")
+        let fileExists = FileManager.default.fileExists(atPath: dbPath.path)
+        self.isFirstRun = !fileExists
+
+        // Async load database if file exists
+        if fileExists {
+            Task {
+                await GeoDatabase.shared.loadDatabase()
+            }
+        }
 
         // Configure poller callback
         // The callback runs on a background Task within ConnectionPoller,
@@ -27,15 +37,6 @@ class AppStore: ObservableObject {
 
         // Start the background polling task
         poller.start()
-    }
-
-    func checkDatabaseStatus() {
-        Task {
-            let hasDB = await GeoDatabase.shared.hasLocalDatabase()
-            await MainActor.run {
-                self.isFirstRun = !hasDB
-            }
-        }
     }
 
     func stopPolling() {

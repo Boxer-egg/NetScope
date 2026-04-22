@@ -146,9 +146,116 @@ struct SetupView: View {
     }
 
     private func downloadDatabase() {
-        // Implementation for Stage 2 (Automatic download via Key)
+        let trimmedKey = licenseKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedKey.isEmpty else { return }
         isDownloading = true
-        errorMessage = "Automatic download is coming soon in Phase 2. Please use manual install for now."
-        isDownloading = false
+        errorMessage = nil
+
+        var components = URLComponents(string: "https://download.maxmind.com/app/geoip_download")!
+        components.queryItems = [
+            URLQueryItem(name: "edition_id", value: "GeoLite2-City"),
+            URLQueryItem(name: "license_key", value: trimmedKey),
+            URLQueryItem(name: "suffix", value: "tar.gz")
+        ]
+        guard let url = components.url else {
+            errorMessage = "Invalid download URL"
+            isDownloading = false
+            return
+        }
+
+        Task {
+            do {
+                let (data, response) = try await URLSession.shared.data(from: url)
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw NSError(domain: "NetScope", code: 1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Invalid server response"])
+                }
+
+                switch httpResponse.statusCode {
+                case 200:
+                    break
+                case 401:
+                    throw NSError(domain: "NetScope", code: 1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Invalid license key. Please verify your MaxMind account and key."])
+                default:
+                    throw NSError(domain: "NetScope", code: 1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Download failed (HTTP \(httpResponse.statusCode)). Please try again."])
+                }
+
+                // Validate that data is a tar.gz (magic number: 1f 8b)
+                guard data.count > 2, data[0] == 0x1f, data[1] == 0x8b else {
+                    throw NSError(domain: "NetScope", code: 1,
+                                  userInfo: [NSLocalizedDescriptionKey: "Downloaded file is not a valid archive. Check your license key."])
+                }
+
+                let tempDir = FileManager.default.temporaryDirectory
+                let tarPath = tempDir.appendingPathComponent("GeoLite2-City.tar.gz")
+                try data.write(to: tarPath)
+
+                let extractDir = tempDir.appendingPathComponent("geolite_extract_\(Int(Date().timeIntervalSince1970))")
+                try FileManager.default.createDirectory(at: extractDir, withIntermediateDirectories: true)
+
+                let tarTask = Process()
+                tarTask.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+                tarTask.arguments = ["-xzf", tarPath.path, "-C", extractDir.path]
+                try tarTask.run()
+                tarTask.waitUntilExit()
+
+                guard tarTask.terminationStatus == 0 else {
+                    throw NSError(domain: "NetScope", code: 2,
+                                  userInfo: [NSLocalizedDescriptionKey: "Failed to extract archive"])
+                }
+
+                var mmdbURL: URL?
+                let enumerator = FileManager.default.enumerator(at: extractDir, includingPropertiesForKeys: nil)
+                while let fileURL = enumerator?.nextObject() as? URL {
+                    if fileURL.lastPathComponent == "GeoLite2-City.mmdb" {
+                        mmdbURL = fileURL
+                        break
+                    }
+                }
+
+                guard let source = mmdbURL else {
+                    throw NSError(domain: "NetScope", code: 3,
+                                  userInfo: [NSLocalizedDescriptionKey: "Database file not found in downloaded archive"])
+                }
+
+                let appSupport = FileManager.default.homeDirectoryForCurrentUser
+                    .appendingPathComponent("Library/Application Support/NetScope", isDirectory: true)
+                if !FileManager.default.fileExists(atPath: appSupport.path) {
+                    try FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+                }
+
+                let destination = appSupport.appendingPathComponent("GeoLite2-City.mmdb")
+                if FileManager.default.fileExists(atPath: destination.path) {
+                    try FileManager.default.removeItem(at: destination)
+                }
+                try FileManager.default.moveItem(at: source, to: destination)
+
+                try? FileManager.default.removeItem(at: tarPath)
+                try? FileManager.default.removeItem(at: extractDir)
+
+                // Load database before dismissing, and verify it loaded
+                await GeoDatabase.shared.loadDatabase()
+                let hasDB = await GeoDatabase.shared.hasLocalDatabase()
+                guard hasDB else {
+                    throw NSError(domain: "NetScope", code: 4,
+                                  userInfo: [NSLocalizedDescriptionKey: "Database saved but could not be loaded. Please restart the app."])
+                }
+
+                await MainActor.run {
+                    store.isFirstRun = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+
+            await MainActor.run {
+                self.isDownloading = false
+            }
+        }
     }
 }

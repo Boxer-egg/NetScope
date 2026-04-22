@@ -25,8 +25,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        // Regular policy: visible in Dock and Command+Tab, plus menu bar icon
+        NSApp.setActivationPolicy(.regular)
         menuBarController = MenuBarController()
+        // Auto-show window on launch
+        menuBarController?.showWindow()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

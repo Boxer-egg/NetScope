@@ -2,42 +2,95 @@ import SwiftUI
 
 struct MainWindowView: View {
     @ObservedObject private var store = AppStore.shared
-    @State private var columnVisibility = NavigationSplitViewVisibility.all
+    @State private var leftPanelVisible = true
+    @State private var rightPanelVisible = true
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Column 1: Process List
-            ProcessListView()
-                .frame(minWidth: 220, maxWidth: 350)
-                .environmentObject(store.connectionStore)
-                .background(Color(NSColor.windowBackgroundColor))
-        } content: {
-            // Column 2: Map
+        ZStack {
+            // Full-screen map (always behind everything)
             MapContainerView()
-                .frame(minWidth: 400)
                 .environmentObject(store.connectionStore)
                 .environmentObject(store.tracerouteStore)
-                .background(Color.black) // Dark background for map area
-        } detail: {
-            // Column 3: Details (Resizable)
-            DetailPanelView()
-                .frame(minWidth: 280, maxWidth: 450)
-                .environmentObject(store.connectionStore)
-                .environmentObject(store.tracerouteStore)
-                .background(Color(NSColor.windowBackgroundColor))
+
+            // Left panel + trigger
+            HStack(spacing: 0) {
+                if leftPanelVisible {
+                    ProcessListView()
+                        .environmentObject(store.connectionStore)
+                        .frame(width: 220)
+                        .background(
+                            Color(NSColor.windowBackgroundColor)
+                                .opacity(0.92)
+                        )
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
+                }
+
+                // Left trigger button
+                if !leftPanelVisible {
+                    Button(action: { withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { leftPanelVisible = true } }) {
+                        Color.white.opacity(0.15)
+                            .frame(width: 12)
+                            .overlay(
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundColor(.white.opacity(0.6))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .frame(height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 0, style: .continuous))
+                }
+
+                Spacer()
+            }
+
+            // Right panel + trigger
+            HStack(spacing: 0) {
+                Spacer()
+
+                // Right trigger button
+                if !rightPanelVisible {
+                    Button(action: { withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { rightPanelVisible = true } }) {
+                        Color.white.opacity(0.15)
+                            .frame(width: 12)
+                            .overlay(
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundColor(.white.opacity(0.6))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .frame(height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 0, style: .continuous))
+                }
+
+                if rightPanelVisible {
+                    DetailPanelView()
+                        .environmentObject(store.connectionStore)
+                        .environmentObject(store.tracerouteStore)
+                        .frame(width: 280)
+                        .background(
+                            Color(NSColor.windowBackgroundColor)
+                                .opacity(0.92)
+                        )
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
+                }
+            }
         }
-        .frame(minWidth: 1000, minHeight: 650)
+        .frame(minWidth: 900, minHeight: 560)
         .sheet(isPresented: $store.isFirstRun) {
             SetupView()
                 .environmentObject(store)
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("ToggleDetailPanel"))) { _ in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                if columnVisibility == .all {
-                    columnVisibility = .doubleColumn
-                } else {
-                    columnVisibility = .all
-                }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                rightPanelVisible.toggle()
             }
         }
     }
