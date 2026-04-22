@@ -84,6 +84,14 @@ class ConnectionStore: ObservableObject {
         return result.sorted { $0.bytesIn + $0.bytesOut > $1.bytesIn + $1.bytesOut }
     }
 
+    func reset() {
+        connections = []
+        connectionMap = [:]
+        queriedIPs = []
+        selectedProcess = nil
+        // Keep processColors and colorIndex to maintain color consistency across switches
+    }
+
     func update(with fresh: [Connection]) {
         let now = Date()
 
