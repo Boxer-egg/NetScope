@@ -32,6 +32,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController?.showWindow()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        menuBarController?.showWindow()
+        return true
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        menuBarController?.showWindow()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
@@ -88,14 +97,25 @@ final class MenuBarController: NSObject, ObservableObject {
 
     private func showContextMenu(_ sender: NSStatusBarButton) {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Open NetScope", action: #selector(toggleWindow), keyEquivalent: "")
+
+        let openItem = NSMenuItem(title: "Open NetScope", action: #selector(toggleWindow), keyEquivalent: "")
+        openItem.target = self
+        menu.addItem(openItem)
+
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(withTitle: "Preferences…", action: #selector(showPreferences), keyEquivalent: ",")
+
+        let prefsItem = NSMenuItem(title: "Preferences…", action: #selector(showPreferences), keyEquivalent: ",")
+        prefsItem.target = self
+        menu.addItem(prefsItem)
+
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(withTitle: "Quit NetScope", action: #selector(quit), keyEquivalent: "q")
-        statusItem.menu = menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
+
+        let quitItem = NSMenuItem(title: "Quit NetScope", action: #selector(quit), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+
+        let point = NSPoint(x: sender.bounds.midX, y: sender.bounds.minY)
+        menu.popUp(positioning: nil, at: point, in: sender)
     }
 
     func showWindow() {
