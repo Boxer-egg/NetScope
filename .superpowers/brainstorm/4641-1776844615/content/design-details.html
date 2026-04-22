@@ -1,0 +1,263 @@
+<h2>Part 2: 详细功能设计</h2>
+<p class="subtitle">连线优化、进程名美化、右侧 Summary/Statistics</p>
+
+<div class="section">
+  <h3>1. 连线曲线优化</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">当前：MKGeodesicPolyline</div>
+      <div class="mockup-body" style="height: 160px; display: flex; align-items: center; justify-content: center; background: #1a1a2e;">
+        <svg width="200" height="120" viewBox="0 0 200 120">
+          <circle cx="100" cy="100" r="4" fill="white"/>
+          <circle cx="40" cy="20" r="4" fill="#58A6FF"/>
+          <circle cx="160" cy="30" r="4" fill="#3FB950"/>
+          <path d="M100,100 Q70,30 40,20" stroke="#58A6FF" stroke-width="2" fill="none" opacity="0.6"/>
+          <path d="M100,100 Q140,50 160,30" stroke="#3FB950" stroke-width="2" fill="none" opacity="0.6"/>
+          <text x="100" y="115" fill="rgba(255,255,255,0.5)" font-size="8" text-anchor="middle">本地</text>
+          <text x="40" y="12" fill="#58A6FF" font-size="8" text-anchor="middle">远程A</text>
+          <text x="160" y="22" fill="#3FB950" font-size="8" text-anchor="middle">远程B</text>
+        </svg>
+      </div>
+      <div style="padding: 8px; font-size: 11px; color: #666;">
+        问题：曲线太大，弧线明显偏离大圆路径，视觉上太"跳"
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">优化后：小曲率弧线</div>
+      <div class="mockup-body" style="height: 160px; display: flex; align-items: center; justify-content: center; background: #1a1a2e;">
+        <svg width="200" height="120" viewBox="0 0 200 120">
+          <circle cx="100" cy="100" r="4" fill="white"/>
+          <circle cx="40" cy="20" r="4" fill="#58A6FF"/>
+          <circle cx="160" cy="30" r="4" fill="#3FB950"/>
+          <path d="M100,100 C85,70 55,40 40,20" stroke="#58A6FF" stroke-width="2" fill="none" opacity="0.6"/>
+          <path d="M100,100 C115,80 145,50 160,30" stroke="#3FB950" stroke-width="2" fill="none" opacity="0.6"/>
+          <text x="100" y="115" fill="rgba(255,255,255,0.5)" font-size="8" text-anchor="middle">本地</text>
+          <text x="40" y="12" fill="#58A6FF" font-size="8" text-anchor="middle">远程A</text>
+          <text x="160" y="22" fill="#3FB950" font-size="8" text-anchor="middle">远程B</text>
+        </svg>
+      </div>
+      <div style="padding: 8px; font-size: 11px; color: #666;">
+        方案：控制点更靠近直线路径，曲率更小，视觉上更自然
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 12px; padding: 12px; background: #f5f5f7; border-radius: 8px; font-size: 12px;">
+    <strong>技术方案：</strong><br>
+    不用 <code>MKGeodesicPolyline</code>，改为自定义 <code>MKPolyline</code>，用贝塞尔曲线计算中间点。<br>
+    控制点偏移量 = 直线距离的 15%（可配置），方向垂直于连线。<br>
+    这样既保持了弧线美感，又不会过度弯曲。
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. 进程名称美化</h3>
+  <div class="mockup">
+    <div class="mockup-header">进程名映射示例</div>
+    <div class="mockup-body" style="padding: 12px; font-size: 12px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 1px solid #ddd;">
+            <th style="text-align: left; padding: 6px;">原始名称（nettop）</th>
+            <th style="text-align: left; padding: 6px;">美化后名称</th>
+            <th style="text-align: left; padding: 6px;">来源</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 6px; color: #666;">Microsoft Edge .772</td>
+            <td style="padding: 6px; font-weight: 500;">Microsoft Edge</td>
+            <td style="padding: 6px; color: #3a7;">NSWorkspace.runningApplications</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 6px; color: #666;">Google Chrome H.74938</td>
+            <td style="padding: 6px; font-weight: 500;">Google Chrome</td>
+            <td style="padding: 6px; color: #3a7;">NSWorkspace.runningApplications</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 6px; color: #666;">Telegram.735</td>
+            <td style="padding: 6px; font-weight: 500;">Telegram</td>
+            <td style="padding: 6px; color: #3a7;">NSWorkspace.runningApplications</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 6px; color: #666;">com.avg.daemon.453</td>
+            <td style="padding: 6px; font-weight: 500;">com.avg.daemon</td>
+            <td style="padding: 6px; color: #d92;">保持原名（无法匹配）</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 6px; color: #666;">zerotier-one.284</td>
+            <td style="padding: 6px; font-weight: 500;">zerotier-one</td>
+            <td style="padding: 6px; color: #d92;">保持原名（无法匹配）</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px; color: #666;">apsd.147</td>
+            <td style="padding: 6px; font-weight: 500;">apsd</td>
+            <td style="padding: 6px; color: #d92;">保持原名（系统进程）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="margin-top: 12px; padding: 12px; background: #f5f5f7; border-radius: 8px; font-size: 12px;">
+    <strong>技术方案：</strong><br>
+    在 <code>ConnectionPoller</code> 解析进程名时，用 <code>NSWorkspace.shared.runningApplications</code> 进行匹配：<br>
+    1. 先用 <code>localizedName</code> 精确匹配<br>
+    2. 再用 <code>bundleIdentifier</code> 匹配（处理 helper/Renderer 进程）<br>
+    3. 匹配不到就保持 nettop 原始名（去掉末尾的 PID）
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. 右侧 Summary/Statistics 区域</h3>
+  <div class="mockup">
+    <div class="mockup-header">右侧面板扩展设计</div>
+    <div class="mockup-body" style="padding: 12px; font-size: 11px; width: 260px;">
+      <!-- Summary Section -->
+      <div style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">Summary</div>
+      <div style="color: #666; margin-bottom: 12px;">18 processes, 547 domains</div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <div style="flex: 1; background: rgba(0,122,255,0.1); padding: 8px; border-radius: 6px; text-align: center;">
+          <div style="font-size: 9px; color: #666;">↓ Received</div>
+          <div style="font-weight: bold; font-size: 13px; color: #007AFF;">41.6 GB</div>
+        </div>
+        <div style="flex: 1; background: rgba(255,59,48,0.1); padding: 8px; border-radius: 6px; text-align: center;">
+          <div style="font-size: 9px; color: #666;">↑ Sent</div>
+          <div style="font-weight: bold; font-size: 13px; color: #FF3B30;">5.01 GB</div>
+        </div>
+      </div>
+
+      <!-- Connections Section -->
+      <div style="font-weight: bold; margin-bottom: 8px;">Connections</div>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; color: #666;">
+          <span>Active</span><span style="font-weight: 500;">523</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: #666;">
+          <span>Established</span><span style="font-weight: 500;">487</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: #666;">
+          <span>Closing</span><span style="font-weight: 500;">36</span>
+        </div>
+      </div>
+
+      <!-- Top Processes -->
+      <div style="font-weight: bold; margin-bottom: 8px;">Top Processes</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px;">🧭</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 500;">Safari</div>
+            <div style="font-size: 9px; color: #666;">30.8 GB down, 2.57 GB up</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px;">🎵</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 500;">Music</div>
+            <div style="font-size: 9px; color: #666;">4.4 GB down, 2.32 GB up</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; background: #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px;">🏪</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 500;">App Store</div>
+            <div style="font-size: 9px; color: #666;">4.41 GB down, 1.38 MB up</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Domains -->
+      <div style="font-weight: bold; margin-bottom: 8px;">Top Domains</div>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; color: #666;">
+          <span>googlevideo.com</span><span>22.5 GB</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: #666;">
+          <span>icloud-content.com</span><span>2.72 GB</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: #666;">
+          <span>cdn-apple.com</span><span>4.4 GB</span>
+        </div>
+      </div>
+
+      <!-- Divider + Existing Connection List -->
+      <div style="border-top: 1px solid #ddd; padding-top: 12px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">Connections Detail</div>
+        <div style="color: #666;">8.8.8.8:443 · Resolving...</div>
+        <div style="color: #666;">104.18.7.151:443 · United States</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 12px; padding: 12px; background: #f5f5f7; border-radius: 8px; font-size: 12px;">
+    <strong>技术方案：</strong><br>
+    在 <code>DetailPanelView</code> 顶部新增 <code>SummarySection</code> 和 <code>StatisticsSection</code>，从 <code>ConnectionStore</code> 计算聚合数据。<br>
+    Top Processes 按总流量排序，Top Domains 按域名聚合（从 IP 反查或直接从连接信息获取）。
+  </div>
+</div>
+
+<div class="section">
+  <h3>4. License Key 自动下载</h3>
+  <div class="mockup">
+    <div class="mockup-header">MaxMind 自动下载流程</div>
+    <div class="mockup-body" style="padding: 12px; font-size: 11px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: #007AFF; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px;">1</div>
+          <div>用户输入 License Key（从 maxmind.com 获取）</div>
+        </div>
+        <div style="margin-left: 11px; border-left: 2px solid #ddd; padding-left: 18px;">
+          POST https://download.maxmind.com/app/geoip_download<br>
+          ?edition_id=GeoLite2-City<br>
+          &license_key=\(key)<br>
+          &suffix=tar.gz
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: #007AFF; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px;">2</div>
+          <div>下载 tar.gz 文件到临时目录</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: #007AFF; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px;">3</div>
+          <div>解压，提取 GeoLite2-City.mmdb</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: #007AFF; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px;">4</div>
+          <div>移动到 ~/Library/Application Support/NetScope/</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: #34C759; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px;">✓</div>
+          <div>加载数据库，完成引导</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>确认详细设计</h3>
+  <div class="options">
+    <div class="option" data-choice="accepted">
+      <div class="letter">✓</div>
+      <div class="content">
+        <h3>全部确认</h3>
+        <p>所有详细设计看起来 OK，进入实现阶段</p>
+      </div>
+    </div>
+    <div class="option" data-choice="revise-curve">
+      <div class="letter">✎</div>
+      <div class="content">
+        <h3>调整连线曲线</h3>
+        <p>想修改曲率参数或方案</p>
+      </div>
+    </div>
+    <div class="option" data-choice="revise-panel">
+      <div class="letter">✎</div>
+      <div class="content">
+        <h3>调整右侧面板</h3>
+        <p>Summary/Statistics 区域需要修改</p>
+      </div>
+    </div>
+  </div>
+</div>
