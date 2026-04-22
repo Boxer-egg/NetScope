@@ -1,0 +1,112 @@
+<h2>NetScope UI 改进需求概览</h2>
+<p class="subtitle">当前架构 vs 目标设计</p>
+
+<div class="section">
+  <h3>当前 UI 架构（三栏布局）</h3>
+  <div class="mockup">
+    <div class="mockup-header">Current: NavigationSplitView</div>
+    <div class="mockup-body" style="display: flex; height: 300px; gap: 4px;">
+      <div style="width: 200px; background: #f5f5f7; border-radius: 4px; padding: 8px; font-size: 11px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">左侧：进程列表</div>
+        <div style="color: #666;">- 搜索框</div>
+        <div style="color: #666;">- All Processes</div>
+        <div style="color: #666;">- [进程名] (PID) - 数量</div>
+        <div style="color: #666;">- 实时流量 ↓ ↑</div>
+        <div style="margin-top: 12px; color: #ff6b6b; font-size: 10px;">问题：名字像 ps aux 输出</div>
+      </div>
+      <div style="flex: 1; background: #1a1a2e; border-radius: 4px; padding: 8px; font-size: 11px; color: white;">
+        <div style="font-weight: bold; margin-bottom: 8px;">中间：MapKit 地图</div>
+        <div style="color: #aaa;">- MKGeodesicPolyline 连线</div>
+        <div style="color: #aaa;">- 从本地到远程 IP 的弧线</div>
+        <div style="margin-top: 12px; color: #ff6b6b; font-size: 10px;">问题：曲线太圆、太跳动</div>
+      </div>
+      <div style="width: 220px; background: #f5f5f7; border-radius: 4px; padding: 8px; font-size: 11px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">右侧：连接详情</div>
+        <div style="color: #666;">- 进程名 + 连接数</div>
+        <div style="color: #666;">- 连接列表（IP、端口、协议）</div>
+        <div style="color: #666;">- 地理位置 / Resolving...</div>
+        <div style="color: #666;">- Traceroute 展开</div>
+        <div style="margin-top: 12px; color: #ff6b6b; font-size: 10px;">问题：功能单一，参考 Little Snitch</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>需求清单</h3>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="setup-license">
+      <div class="letter">1</div>
+      <div class="content">
+        <h3>引导页 License Key 功能</h3>
+        <p>Option 2: Use License Key — 当前是占位符，需要实现自动下载 MaxMind 数据库</p>
+      </div>
+    </div>
+    <div class="option" data-choice="right-panel-tabs">
+      <div class="letter">2</div>
+      <div class="content">
+        <h3>右侧 Tab 扩展（参考 Little Snitch）</h3>
+        <p>Summary、Connections 统计、Statistics（Top Processes、Top Domains）、Traffic Graph 等</p>
+      </div>
+    </div>
+    <div class="option" data-choice="ui-sliding">
+      <div class="letter">3a</div>
+      <div class="content">
+        <h3>UI 优化：滑入式侧边栏</h3>
+        <p>左右 tab 从屏幕两侧滑入，地图为主视觉，类似 Little Snitch 的沉浸式设计</p>
+      </div>
+    </div>
+    <div class="option" data-choice="curve-smooth">
+      <div class="letter">3b</div>
+      <div class="content">
+        <h3>UI 优化：连线曲线更平滑</h3>
+        <p>当前 MKGeodesicPolyline 太圆太跳动，需要更小的曲率</p>
+      </div>
+    </div>
+    <div class="option" data-choice="process-names">
+      <div class="letter">3c</div>
+      <div class="content">
+        <h3>UI 优化：进程名称美化</h3>
+        <p>显示用户友好的应用名（如 "Safari" 而非 "com.apple.Safari"），匹配 Dock/Activity Monitor</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Little Snitch 参考设计</h3>
+  <div class="mockup">
+    <div class="mockup-header">Little Snitch Network Monitor</div>
+    <div class="mockup-body" style="display: flex; height: 320px; gap: 4px;">
+      <div style="width: 200px; background: #f5f5f7; border-radius: 4px; padding: 8px; font-size: 11px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">左侧</div>
+        <div style="color: #666;">macOS (系统进程组)</div>
+        <div style="color: #666;">  └ youtube.com</div>
+        <div style="color: #666;">  └ ytimg.com</div>
+        <div style="color: #666;">  └ ...</div>
+        <div style="color: #666;">Safari</div>
+        <div style="color: #666;">Pages</div>
+        <div style="color: #666;">LaunchBar</div>
+        <div style="color: #666;">App Store</div>
+        <div style="color: #666;">Music</div>
+        <div style="margin-top: 12px; color: #3a7;">每个有迷你流量柱状图</div>
+      </div>
+      <div style="flex: 1; background: #e8f4e8; border-radius: 4px; padding: 8px; font-size: 11px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">中间地图</div>
+        <div style="color: #666;">从本地位置放射状连线到各城市</div>
+        <div style="color: #666;">城市标签：London, Paris, Berlin...</div>
+        <div style="margin-top: 12px; color: #3a7;">弧线更直，更自然</div>
+      </div>
+      <div style="width: 220px; background: #f5f5f7; border-radius: 4px; padding: 8px; font-size: 11px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">右侧 Tab 面板</div>
+        <div style="font-weight: bold; color: #333;">Summary</div>
+        <div style="color: #666; margin-bottom: 8px;">18 processes, 547 domains<br>↑ 5.01 GB / ↓ 41.6 GB</div>
+        <div style="font-weight: bold; color: #333;">Connections</div>
+        <div style="color: #666; margin-bottom: 8px;">88 denied · 0 unconfirmed · 0 incoming</div>
+        <div style="font-weight: bold; color: #333;">Statistics</div>
+        <div style="color: #666; margin-bottom: 8px;">Top Processes: Safari 30.8GB<br>Top Domains: googlevideo.com 22.5GB</div>
+        <div style="margin-top: 12px; color: #3a7;">底部有流量时间轴</div>
+      </div>
+    </div>
+  </div>
+</div>
