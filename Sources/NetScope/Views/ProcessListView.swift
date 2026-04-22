@@ -6,10 +6,11 @@ struct ProcessListView: View {
     @State private var searchText = ""
 
     var filteredProcesses: [(name: String, pid: Int, count: Int, colorIndex: Int)] {
+        let processes = store.processes
         if searchText.isEmpty {
-            return store.processes
+            return processes
         }
-        return store.processes.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return processes.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
 
     var body: some View {
@@ -29,6 +30,7 @@ struct ProcessListView: View {
 
             // "All" row
             Button(action: { store.selectProcess(nil) }) {
+                let count = store.totalConnectionCount
                 HStack(spacing: 10) {
                     Image(systemName: "network")
                         .font(.system(size: 18))
@@ -37,7 +39,7 @@ struct ProcessListView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("All Processes")
                             .font(.system(size: 13, weight: .medium))
-                        Text("\(store.totalConnectionCount) connections")
+                        Text("\(count) connections")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -59,7 +61,6 @@ struct ProcessListView: View {
                     Button(action: { store.selectProcess(proc.name) }) {
                         ProcessRow(
                             name: proc.name,
-                            pid: proc.pid,
                             count: proc.count,
                             color: store.processColorsList[proc.colorIndex % store.processColorsList.count],
                             isSelected: store.selectedProcess == proc.name
@@ -71,7 +72,7 @@ struct ProcessListView: View {
                 }
             }
             .listStyle(.plain)
-            .scrollContentBackground(.hidden) // Important for macOS 13+
+            .scrollContentBackground(.hidden)
         }
         .background(Color(NSColor.windowBackgroundColor))
     }
@@ -79,10 +80,18 @@ struct ProcessListView: View {
 
 struct ProcessRow: View {
     let name: String
-    let pid: Int
     let count: Int
     let color: String
     let isSelected: Bool
+
+    @EnvironmentObject var store: ConnectionStore
+
+    var trafficInfo: (in: Int64, out: Int64) {
+        let processConnections = store.connections.filter { $0.processName == name }
+        let totalIn = processConnections.reduce(0) { $0 + $1.bytesIn }
+        let totalOut = processConnections.reduce(0) { $0 + $1.bytesOut }
+        return (totalIn, totalOut)
+    }
 
     var nsColor: NSColor {
         NSColor(hex: color) ?? .systemBlue
@@ -90,7 +99,6 @@ struct ProcessRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // App icon
             AppIconView(processName: name)
                 .frame(width: 28, height: 28)
                 .cornerRadius(6)
@@ -99,9 +107,14 @@ struct ProcessRow: View {
                 Text(name)
                     .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
-                Text("PID: \(pid)")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+
+                HStack(spacing: 4) {
+                    Text("↓\(formatCompactRate(trafficInfo.in))")
+                    Text("↑\(formatCompactRate(trafficInfo.out))")
+                }
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
             }
 
             Spacer()
@@ -127,6 +140,13 @@ struct ProcessRow: View {
             alignment: .leading
         )
     }
+
+    private func formatCompactRate(_ bytes: Int64) -> String {
+        let kb = Double(bytes) / 1024.0
+        if kb < 0.1 { return "0 B/s" }
+        else if kb < 1024.0 { return String(format: "%.0f KB/s", kb) }
+        else { return String(format: "%.1f MB/s", kb / 1024.0) }
+    }
 }
 
 struct AppIconView: NSViewRepresentable {
@@ -146,16 +166,28 @@ struct AppIconView: NSViewRepresentable {
     }
 
     private func iconForProcess(_ name: String) -> NSImage? {
-        // Try to find running application by name
         let runningApps = NSWorkspace.shared.runningApplications
+
         if let app = runningApps.first(where: {
-            $0.localizedName?.lowercased().contains(name.lowercased()) == true
-            || $0.bundleIdentifier?.lowercased().contains(name.lowercased()) == true
+            $0.localizedName?.lowercased() == name.lowercased()
+            || $0.bundleIdentifier?.lowercased() == name.lowercased()
         }) {
             return app.icon
         }
 
-        // Fallback: generic gear icon
+        if let app = runningApps.first(where: {
+            let locName = $0.localizedName?.lowercased() ?? ""
+            let bundleId = $0.bundleIdentifier?.lowercased() ?? ""
+            let lowerName = name.lowercased()
+            return bundleId.contains(lowerName) || lowerName.contains(bundleId) || lowerName.contains(locName)
+        }) {
+            return app.icon
+        }
+
+        if name.lowercased().contains("apple") || name.lowercased().contains("kernel") {
+            return NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
+        }
+
         return NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
     }
 }

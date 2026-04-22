@@ -47,6 +47,11 @@ actor GeoDatabase {
     }
 
     func lookup(ip: String) async -> GeoInfo? {
+        // Skip private/local IPs — they have no public geo location
+        if isPrivateIP(ip) {
+            return nil
+        }
+
         if let cached = cache[ip] {
             return cached
         }
@@ -60,7 +65,10 @@ actor GeoDatabase {
             defer { pendingLookups.removeValue(forKey: ip) }
             let result = await performLookup(ip: ip)
             if let result = result {
+                print("[GeoDatabase] Successfully resolved \(ip) to \(result.country)")
                 insertCache(ip: ip, geo: result)
+            } else {
+                print("[GeoDatabase] Failed to resolve \(ip)")
             }
             return result
         }
