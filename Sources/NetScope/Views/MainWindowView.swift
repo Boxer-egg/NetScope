@@ -4,6 +4,7 @@ struct MainWindowView: View {
     @ObservedObject private var store = AppStore.shared
     @State private var leftPanelVisible = true
     @State private var rightPanelVisible = true
+    @State private var selectedSource: String = ""
 
     var body: some View {
         ZStack {
@@ -81,6 +82,29 @@ struct MainWindowView: View {
                             removal: .move(edge: .trailing).combined(with: .opacity)
                         ))
                 }
+            }
+
+            // Top toolbar overlay
+            VStack {
+                HStack {
+                    Spacer()
+                    Picker("Data Source", selection: $selectedSource) {
+                        ForEach(store.availableDataSources, id: \.self) { source in
+                            Text(source).tag(source)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 240)
+                    .onChange(of: selectedSource) { newValue in
+                        store.switchDataSource(to: newValue)
+                    }
+                    .onAppear {
+                        selectedSource = store.currentDataSource
+                    }
+                    Spacer()
+                }
+                .padding(.top, 8)
+                Spacer()
             }
         }
         .frame(minWidth: 900, minHeight: 560)
