@@ -4,7 +4,7 @@ struct MainWindowView: View {
     @ObservedObject private var store = AppStore.shared
     @State private var leftPanelVisible = true
     @State private var rightPanelVisible = true
-    @State private var selectedSource: String = "nettop"
+    @State private var selectedSource: String = ""
 
     var body: some View {
         ZStack {
@@ -96,7 +96,10 @@ struct MainWindowView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 240)
                     .onChange(of: selectedSource) { newValue in
-                        AppStore.shared.switchDataSource(to: newValue)
+                        store.switchDataSource(to: newValue)
+                    }
+                    .onAppear {
+                        selectedSource = store.currentDataSource
                     }
                     Spacer()
                 }
