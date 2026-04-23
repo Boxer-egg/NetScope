@@ -1,5 +1,7 @@
 .build/
 .swiftpm/
+.superpowers/
+.claude/
 *.xcworkspace
 *.xcodeproj
 xcuserdata/
