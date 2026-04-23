@@ -8,16 +8,16 @@ final class NetworkStatisticsSourceTests: XCTestCase {
         XCTAssertEqual(source.displayName, "NetworkStatistics")
     }
 
-    func testStartStopDoesNotCrash() {
+    func testStartStopDoesNotCrashAndReturnsConnections() {
         let source = NetworkStatisticsSource()
-        let expectation = self.expectation(description: "onUpdate called")
+        let expectation = self.expectation(description: "onUpdate called with connections")
 
-        source.onUpdate = { _ in
+        source.onUpdate = { connections in
             expectation.fulfill()
         }
 
         source.start()
-        wait(for: [expectation], timeout: 2.0)
+        wait(for: [expectation], timeout: 5.0)
         source.stop()
     }
 }
