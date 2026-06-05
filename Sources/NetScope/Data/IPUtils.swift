@@ -21,7 +21,7 @@ func isPrivateIP(_ ip: String) -> Bool {
 
 /// Executes a shell command and returns its stdout as a string.
 /// Returns empty string on failure.
-func shell(_ command: String) -> String {
+func shell(_ command: String, timeout: TimeInterval = 5.0) -> String {
     let task = Process()
     let pipe = Pipe()
     task.standardOutput = pipe
@@ -36,12 +36,15 @@ func shell(_ command: String) -> String {
         return ""
     }
 
-    // Add 5-second timeout
-    let timeoutTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
-        task.terminate()
+    // Reliable timeout using DispatchQueue (does not depend on RunLoop)
+    let timeoutWork = DispatchWorkItem {
+        if task.isRunning {
+            task.terminate()
+        }
     }
+    DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timeoutWork)
 
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    timeoutTimer.invalidate()
+    timeoutWork.cancel()
     return String(data: data, encoding: .utf8) ?? ""
 }

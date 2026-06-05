@@ -14,6 +14,7 @@ class NetworkStatisticsSource: ConnectionSource {
     private var manager: NStatManagerRef?
     private var sources: [NStatSourceRef] = []
     private var sourceData: [NStatSourceRef: [String: Any]] = [:]
+    private let stateLock = NSLock()
     private var isPolling = false
 
     func start() {
@@ -40,11 +41,11 @@ class NetworkStatisticsSource: ConnectionSource {
                 to: NStatManagerDestroyFunc.self)
             destroy(manager)
         }
-        queue.sync {
-            sources.removeAll()
-            sourceData.removeAll()
-            self.manager = nil
-        }
+        stateLock.lock()
+        sources.removeAll()
+        sourceData.removeAll()
+        self.manager = nil
+        stateLock.unlock()
         if let handle = handle {
             dlclose(handle)
             self.handle = nil
@@ -102,8 +103,10 @@ class NetworkStatisticsSource: ConnectionSource {
     }
 
     private func addSource(_ src: NStatSourceRef) {
-        guard !sources.contains(where: { $0 == src }) else { return }
+        stateLock.lock()
+        guard !sources.contains(where: { $0 == src }) else { stateLock.unlock(); return }
         sources.append(src)
+        stateLock.unlock()
 
         guard let handle = handle else { return }
 
@@ -116,28 +119,29 @@ class NetworkStatisticsSource: ConnectionSource {
 
         let countsBlock: @convention(block) (NSDictionary) -> Void = { [weak self] dict in
             guard let props = dict as? [String: Any] else { return }
-            self?.queue.async { [weak self] in
-                guard let self = self else { return }
-                var merged = self.sourceData[src] ?? [:]
-                for (key, value) in props {
-                    merged[key] = value
-                }
-                self.sourceData[src] = merged
+            self?.stateLock.lock()
+            var merged = self?.sourceData[src] ?? [:]
+            for (key, value) in props {
+                merged[key] = value
             }
+            self?.sourceData[src] = merged
+            self?.stateLock.unlock()
         }
         let descriptionBlock: @convention(block) (NSDictionary) -> Void = { [weak self] dict in
             guard let props = dict as? [String: Any] else { return }
-            self?.queue.async { [weak self] in
-                guard let self = self else { return }
-                var merged = self.sourceData[src] ?? [:]
-                for (key, value) in props {
-                    merged[key] = value
-                }
-                self.sourceData[src] = merged
+            self?.stateLock.lock()
+            var merged = self?.sourceData[src] ?? [:]
+            for (key, value) in props {
+                merged[key] = value
             }
+            self?.sourceData[src] = merged
+            self?.stateLock.unlock()
         }
         let removedBlock: @convention(block) () -> Void = { [weak self] in
-            self?.removeSource(src)
+            self?.stateLock.lock()
+            self?.sources.removeAll { $0 == src }
+            self?.sourceData.removeValue(forKey: src)
+            self?.stateLock.unlock()
         }
 
         setCounts(src, countsBlock)
@@ -146,8 +150,10 @@ class NetworkStatisticsSource: ConnectionSource {
     }
 
     private func removeSource(_ src: NStatSourceRef) {
+        stateLock.lock()
         sources.removeAll { $0 == src }
         sourceData.removeValue(forKey: src)
+        stateLock.unlock()
     }
 
     // MARK: - Polling
@@ -157,8 +163,13 @@ class NetworkStatisticsSource: ConnectionSource {
             onUpdate?([])
             return
         }
-        guard !isPolling else { return }
+        stateLock.lock()
+        guard !isPolling else {
+            stateLock.unlock()
+            return
+        }
         isPolling = true
+        stateLock.unlock()
 
         let queryDescriptions = unsafeBitCast(
             dlsym(handle, "NStatManagerQueryAllSourcesDescriptions")!,
@@ -177,14 +188,20 @@ class NetworkStatisticsSource: ConnectionSource {
     }
 
     private func buildConnections() {
+        stateLock.lock()
+        let currentData = sourceData
+        stateLock.unlock()
+
         var connections: [Connection] = []
-        for props in sourceData.values {
+        for props in currentData.values {
             if let conn = parseProperties(props) {
                 connections.append(conn)
             }
         }
 
+        stateLock.lock()
         isPolling = false
+        stateLock.unlock()
         DispatchQueue.main.async { [weak self] in
             self?.onUpdate?(connections)
         }

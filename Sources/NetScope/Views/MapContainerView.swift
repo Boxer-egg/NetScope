@@ -110,6 +110,9 @@ struct MapViewRepresentable: NSViewRepresentable {
         private var currentOverlays: [String: MKPolyline] = [:]
         private var overlayColors: [MKPolyline: NSColor] = [:]
         private var overlayAlphas: [MKPolyline: CGFloat] = [:]
+        private var polylineCache: [String: MKPolyline] = [:]
+        private var lastConnectionIDs: Set<String> = []
+        private var lastSelectedProcess: String? = nil
         private var localCoordinate = CLLocationCoordinate2D(latitude: 39.9, longitude: 116.4)
         private let locationManager = CLLocationManager()
         private var didInit = false
@@ -127,8 +130,15 @@ struct MapViewRepresentable: NSViewRepresentable {
                 mapView.setRegion(region, animated: false)
             }
 
-            var newOverlaysMap: [String: (MKPolyline, NSColor, CGFloat)] = [:]
             let connsToShow = (selectedProcess == nil) ? allConnections : connections
+            let currentConnectionIDs = Set(connsToShow.map { $0.id })
+            let selectionChanged = lastSelectedProcess != selectedProcess
+            let connectionsChanged = lastConnectionIDs != currentConnectionIDs
+
+            // Skip expensive overlay rebuild if nothing changed
+            guard connectionsChanged || selectionChanged else { return }
+
+            var newOverlaysMap: [String: (MKPolyline, NSColor, CGFloat)] = [:]
 
             for conn in connsToShow {
                 guard let geo = conn.geoInfo, conn.remoteIP != "*" else { continue }
@@ -136,9 +146,14 @@ struct MapViewRepresentable: NSViewRepresentable {
                 let color = NSColor(hex: processColor(conn.processName)) ?? .systemBlue
                 let alpha: CGFloat = isSelected ? 0.7 : 0.2
 
-                // 使用自定义贝塞尔曲线，曲率更小
-                let points = curvedCoordinates(from: localCoordinate, to: geo.coordinate, segments: 40)
-                let polyline = MKPolyline(coordinates: points, count: points.count)
+                let polyline: MKPolyline
+                if let cached = polylineCache[conn.id] {
+                    polyline = cached
+                } else {
+                    let points = curvedCoordinates(from: localCoordinate, to: geo.coordinate, segments: 40)
+                    polyline = MKPolyline(coordinates: points, count: points.count)
+                    polylineCache[conn.id] = polyline
+                }
                 newOverlaysMap[conn.id] = (polyline, color, alpha)
             }
 
@@ -151,30 +166,27 @@ struct MapViewRepresentable: NSViewRepresentable {
                     overlayAlphas.removeValue(forKey: ov)
                 }
                 currentOverlays.removeValue(forKey: id)
+                polylineCache.removeValue(forKey: id)
             }
 
             for (id, data) in newOverlaysMap {
                 if currentOverlays[id] == nil {
-                    // Set color cache BEFORE adding overlay to avoid race with rendererFor
                     overlayColors[data.0] = data.1
                     overlayAlphas[data.0] = data.2
                     mapView.addOverlay(data.0)
                     currentOverlays[id] = data.0
-                } else {
-                    // Update alpha if selection changed
-                    if let existing = currentOverlays[id] {
-                        overlayAlphas[existing] = data.2
-                        // Force renderer refresh by removing and re-adding
-                        mapView.removeOverlay(existing)
-                        overlayColors.removeValue(forKey: existing)
-                        overlayAlphas.removeValue(forKey: existing)
-                        overlayColors[data.0] = data.1
-                        overlayAlphas[data.0] = data.2
-                        mapView.addOverlay(data.0)
-                        currentOverlays[id] = data.0
+                } else if selectionChanged, let existing = currentOverlays[id] {
+                    // Only update alpha, don't recreate overlay
+                    overlayAlphas[existing] = data.2
+                    if let renderer = mapView.renderer(for: existing) as? MKPolylineRenderer {
+                        renderer.alpha = data.2
+                        renderer.setNeedsDisplay()
                     }
                 }
             }
+
+            lastConnectionIDs = currentConnectionIDs
+            lastSelectedProcess = selectedProcess
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {

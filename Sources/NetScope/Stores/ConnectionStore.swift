@@ -105,10 +105,11 @@ class ConnectionStore: ObservableObject {
                 conn.geoInfo = existing.geoInfo
                 conn.lastSeen = now
 
-                let deltaIn = conn.bytesIn - existing.bytesIn
-                let deltaOut = conn.bytesOut - existing.bytesOut
-                conn.bytesIn = deltaIn >= 0 ? deltaIn : conn.bytesIn
-                conn.bytesOut = deltaOut >= 0 ? deltaOut : conn.bytesOut
+                // Calculate delta from raw cumulative values
+                let deltaIn = conn.rawBytesIn - existing.rawBytesIn
+                let deltaOut = conn.rawBytesOut - existing.rawBytesOut
+                conn.bytesIn = deltaIn >= 0 ? deltaIn : 0
+                conn.bytesOut = deltaOut >= 0 ? deltaOut : 0
 
                 if conn.geoInfo == nil, !queriedIPs.contains(conn.remoteIP) {
                     added.append(conn)
@@ -117,6 +118,9 @@ class ConnectionStore: ObservableObject {
             } else {
                 conn.firstSeen = now
                 conn.lastSeen = now
+                // First appearance: show the initial raw value as the first interval's traffic
+                conn.bytesIn = conn.rawBytesIn
+                conn.bytesOut = conn.rawBytesOut
                 if !queriedIPs.contains(conn.remoteIP) {
                     added.append(conn)
                     queriedIPs.insert(conn.remoteIP)

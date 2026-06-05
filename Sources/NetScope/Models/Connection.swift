@@ -14,11 +14,13 @@ struct Connection: Identifiable, Equatable, Hashable {
     var firstSeen: Date
     var lastSeen: Date
 
+    var rawBytesIn: Int64
+    var rawBytesOut: Int64
     var bytesIn: Int64
     var bytesOut: Int64
 
     init(pid: Int, processName: String, localPort: Int, remoteIP: String, remotePort: Int, proto: String, state: String, bytesIn: Int64 = 0, bytesOut: Int64 = 0) {
-        self.id = "\(pid)-\(localPort)-\(remoteIP)-\(remotePort)"
+        self.id = "\(pid)-\(proto)-\(localPort)-\(remoteIP)-\(remotePort)"
         self.pid = pid
         self.processName = processName
         self.localPort = localPort
@@ -28,6 +30,8 @@ struct Connection: Identifiable, Equatable, Hashable {
         self.state = state
         self.firstSeen = Date()
         self.lastSeen = Date()
+        self.rawBytesIn = bytesIn
+        self.rawBytesOut = bytesOut
         self.bytesIn = bytesIn
         self.bytesOut = bytesOut
     }

@@ -9,6 +9,7 @@ class TracerouteStore: ObservableObject {
     @Published var targetIP: String = ""
     @Published var errorMessage: String? = nil
 
+    private var selectedConnection: Connection?
     private var runner = TracerouteRunner()
     private var task: Task<Void, Never>?
 
@@ -16,6 +17,7 @@ class TracerouteStore: ObservableObject {
         // Cancel existing
         cancel()
 
+        selectedConnection = connection
         selectedConnectionID = connection.id
         targetIP = connection.remoteIP
         hops = []
@@ -42,6 +44,11 @@ class TracerouteStore: ObservableObject {
             }
             self.isRunning = false
         }
+    }
+
+    func restartTraceroute() {
+        guard let connection = selectedConnection else { return }
+        startTraceroute(for: connection)
     }
 
     func cancel() {

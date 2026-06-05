@@ -88,6 +88,11 @@ class NettopConnectionSource: ConnectionSource {
         let (remoteIP, remotePort) = parseAddress(remoteAddr)
         let (_, localPort) = parseAddress(localAddr)
 
+        // Skip wildcard/listening sockets that don't represent actual external connections
+        if remoteIP == "*" || remoteIP == "*.*" || remoteIP.isEmpty || remotePort == 0 {
+            return nil
+        }
+
         let state = cols.count > 3 ? cols[3].trimmingCharacters(in: .whitespaces) : "Unknown"
         let bytesIn = cols.count > 4 ? (Int64(cols[4].trimmingCharacters(in: .whitespaces)) ?? 0) : 0
         let bytesOut = cols.count > 5 ? (Int64(cols[5].trimmingCharacters(in: .whitespaces)) ?? 0) : 0

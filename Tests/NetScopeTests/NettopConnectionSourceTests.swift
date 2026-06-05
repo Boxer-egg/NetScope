@@ -31,8 +31,9 @@ final class NettopConnectionSourceTests: XCTestCase {
         XCTAssertFalse(appleIP.isEmpty, "Should parse 17.57.145.55 connection")
         XCTAssertEqual(appleIP.first?.state, "Established")
 
+        // Wildcard/listening sockets should be filtered out
         let wildcardConns = conns.filter { $0.remoteIP == "*" || $0.remoteIP == "*.*" }
-        XCTAssertGreaterThan(wildcardConns.count, 0, "Should parse wildcard connections")
+        XCTAssertEqual(wildcardConns.count, 0, "Wildcard connections should be filtered out")
 
         print("Parsed \(conns.count) connections")
     }
@@ -40,7 +41,12 @@ final class NettopConnectionSourceTests: XCTestCase {
     func testResolvesProcessName() {
         let source = NettopConnectionSource()
         let conns = source.parseNettopOutput(mockNettopOutput)
+        // mDNSResponder only has wildcard/listening sockets in mock data, which are now filtered
         let mdns = conns.filter { $0.processName.lowercased().contains("mdns") }
-        XCTAssertFalse(mdns.isEmpty, "Should resolve mDNSResponder process name")
+        XCTAssertTrue(mdns.isEmpty, "mDNSResponder wildcard sockets should be filtered out")
+
+        // Verify other process names are still resolved correctly
+        let edgeConns = conns.filter { $0.processName == "Microsoft Edge" }
+        XCTAssertFalse(edgeConns.isEmpty, "Should resolve Microsoft Edge process name")
     }
 }

@@ -40,9 +40,7 @@ struct TracerouteView: View {
             // Toolbar
             HStack {
                 Button("Re-run") {
-                    if store.selectedConnectionID != nil {
-                        // Need to find connection and restart
-                    }
+                    store.restartTraceroute()
                 }
                 .buttonStyle(.borderless)
                 .font(.system(size: 11))
