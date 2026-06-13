@@ -74,6 +74,81 @@ struct MapButton: View {
     }
 }
 
+// MARK: - Connection Overlay
+
+/// One connection arc. The curve is drawn in screen space by ConnectionOverlayRenderer.
+final class ConnectionOverlay: NSObject, MKOverlay {
+    let connection: Connection
+    let startCoord: CLLocationCoordinate2D
+    let endCoord: CLLocationCoordinate2D
+    var strokeColor: NSColor
+    var overlayAlpha: CGFloat
+
+    init(connection: Connection,
+         from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D,
+         color: NSColor, alpha: CGFloat) {
+        self.connection = connection
+        self.startCoord = start
+        self.endCoord = end
+        self.strokeColor = color
+        self.overlayAlpha = alpha
+    }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(
+            latitude:  (startCoord.latitude  + endCoord.latitude)  / 2,
+            longitude: (startCoord.longitude + endCoord.longitude) / 2
+        )
+    }
+
+    var boundingMapRect: MKMapRect {
+        let p1 = MKMapPoint(startCoord), p2 = MKMapPoint(endCoord)
+        let minX = min(p1.x, p2.x), maxX = max(p1.x, p2.x)
+        let minY = min(p1.y, p2.y), maxY = max(p1.y, p2.y)
+        let w = max(maxX - minX, 1), h = max(maxY - minY, 1)
+        return MKMapRect(x: minX - w * 0.5, y: minY - h * 0.5, width: w * 2, height: h * 2)
+    }
+}
+
+// MARK: - Connection Overlay Renderer
+
+/// Draws a quadratic Bézier arc in screen (point) coordinates.
+final class ConnectionOverlayRenderer: MKOverlayRenderer {
+    private let conn: ConnectionOverlay
+
+    init(_ overlay: ConnectionOverlay) {
+        self.conn = overlay
+        super.init(overlay: overlay)
+    }
+
+    override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
+        let p1 = point(for: MKMapPoint(conn.startCoord))
+        let p2 = point(for: MKMapPoint(conn.endCoord))
+        let ctrl = Self.controlPoint(p1: p1, p2: p2, curvature: 0.15)
+
+        let path = CGMutablePath()
+        path.move(to: p1)
+        path.addQuadCurve(to: p2, control: ctrl)
+
+        context.setLineWidth(3 / zoomScale)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        context.setStrokeColor(conn.strokeColor.withAlphaComponent(conn.overlayAlpha).cgColor)
+        context.addPath(path)
+        context.strokePath()
+    }
+
+    static func controlPoint(p1: CGPoint, p2: CGPoint, curvature: CGFloat) -> CGPoint {
+        let mx = (p1.x + p2.x) / 2
+        let my = (p1.y + p2.y) / 2
+        let dx = p2.x - p1.x, dy = p2.y - p1.y
+        let len = sqrt(dx * dx + dy * dy)
+        guard len > 0 else { return CGPoint(x: mx, y: my) }
+        let offset = len * curvature
+        return CGPoint(x: mx + (-dy / len) * offset, y: my + (dx / len) * offset)
+    }
+}
+
 // MARK: - MapView Representable
 
 struct MapViewRepresentable: NSViewRepresentable {
@@ -90,7 +165,6 @@ struct MapViewRepresentable: NSViewRepresentable {
         mv.showsUserLocation = false
         mapProxy.mapView = mv
         context.coordinator.mapProxy = mapProxy
-        context.coordinator.trackedMapView = mv
         return mv
     }
 
@@ -108,46 +182,36 @@ struct MapViewRepresentable: NSViewRepresentable {
 
     class Coordinator: NSObject, MKMapViewDelegate, CLLocationManagerDelegate {
         weak var mapProxy: MapViewProxy?
-        private var currentOverlays: [String: MKPolyline] = [:]
-        private var overlayColors: [MKPolyline: NSColor] = [:]
-        private var overlayAlphas: [MKPolyline: CGFloat] = [:]
-        private var overlayConnections: [MKPolyline: Connection] = [:]
-        private var polylineCache: [String: MKPolyline] = [:]
+        private var currentOverlays: [String: ConnectionOverlay] = [:]
         private var lastConnectionIDs: Set<String> = []
         private var lastSelectedProcess: String? = nil
         private var localCoordinate = CLLocationCoordinate2D(latitude: 39.9, longitude: 116.4)
         private let locationManager = CLLocationManager()
         private var didInit = false
-        private weak var tooltipView: NSView?
-        private var trackingArea: NSTrackingArea?
-        weak var trackedMapView: MKMapView?
 
         override init() {
             super.init()
             locationManager.delegate = self
         }
 
-        func update(mapView: MKMapView, connections: [Connection], selectedProcess: String?, allConnections: [Connection], processColor: (String) -> String) {
+        func update(mapView: MKMapView, connections: [Connection], selectedProcess: String?,
+                    allConnections: [Connection], processColor: (String) -> String) {
             if !didInit {
                 didInit = true
                 locationManager.requestAlwaysAuthorization()
-                let region = MKCoordinateRegion(center: localCoordinate, span: MKCoordinateSpan(latitudeDelta: 50, longitudeDelta: 80))
+                let region = MKCoordinateRegion(center: localCoordinate,
+                                                span: MKCoordinateSpan(latitudeDelta: 50, longitudeDelta: 80))
                 mapView.setRegion(region, animated: false)
-                setupTracking(mapView: mapView)
             }
 
             let connsToShow = (selectedProcess == nil) ? allConnections : connections
-            let connsByID = Dictionary(connsToShow.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-            let currentConnectionIDs = Set(connsToShow.map { $0.id })
+            let visibleIDs = Set(connsToShow.compactMap { $0.geoInfo != nil ? $0.id : nil })
             let selectionChanged = lastSelectedProcess != selectedProcess
-            let connectionsChanged = lastConnectionIDs != currentConnectionIDs
+            let connectionsChanged = lastConnectionIDs != visibleIDs
 
-            // Skip expensive overlay rebuild if nothing changed
             guard connectionsChanged || selectionChanged else { return }
 
-            hideTooltip()
-
-            var newOverlaysMap: [String: (MKPolyline, NSColor, CGFloat)] = [:]
+            var newMap: [String: ConnectionOverlay] = [:]
 
             for conn in connsToShow {
                 guard let geo = conn.geoInfo, conn.remoteIP != "*" else { continue }
@@ -155,270 +219,54 @@ struct MapViewRepresentable: NSViewRepresentable {
                 let color = NSColor(hex: processColor(conn.processName)) ?? .systemBlue
                 let alpha: CGFloat = isSelected ? 0.7 : 0.2
 
-                let polyline: MKPolyline
-                if let cached = polylineCache[conn.id] {
-                    polyline = cached
+                if let existing = currentOverlays[conn.id] {
+                    existing.strokeColor = color
+                    existing.overlayAlpha = alpha
+                    newMap[conn.id] = existing
                 } else {
-                    let points = curvedCoordinates(from: localCoordinate, to: geo.coordinate, segments: 40)
-                    polyline = MKPolyline(coordinates: points, count: points.count)
-                    polylineCache[conn.id] = polyline
-                }
-                newOverlaysMap[conn.id] = (polyline, color, alpha)
-            }
-
-            // Diff overlays
-            let toRemove = currentOverlays.keys.filter { newOverlaysMap[$0] == nil }
-            for id in toRemove {
-                if let ov = currentOverlays[id] {
-                    mapView.removeOverlay(ov)
-                    overlayColors.removeValue(forKey: ov)
-                    overlayAlphas.removeValue(forKey: ov)
-                    overlayConnections.removeValue(forKey: ov)
-                }
-                currentOverlays.removeValue(forKey: id)
-                polylineCache.removeValue(forKey: id)
-            }
-
-            for (id, data) in newOverlaysMap {
-                if currentOverlays[id] == nil {
-                    overlayColors[data.0] = data.1
-                    overlayAlphas[data.0] = data.2
-                    overlayConnections[data.0] = connsByID[id]
-                    mapView.addOverlay(data.0)
-                    currentOverlays[id] = data.0
-                } else if selectionChanged, let existing = currentOverlays[id] {
-                    // Only update alpha, don't recreate overlay
-                    overlayAlphas[existing] = data.2
-                    overlayConnections[existing] = connsByID[id]
-                    if let renderer = mapView.renderer(for: existing) as? MKPolylineRenderer {
-                        renderer.alpha = data.2
-                        renderer.setNeedsDisplay()
-                    }
+                    newMap[conn.id] = ConnectionOverlay(
+                        connection: conn,
+                        from: localCoordinate,
+                        to: geo.coordinate,
+                        color: color,
+                        alpha: alpha
+                    )
                 }
             }
 
-            lastConnectionIDs = currentConnectionIDs
+            for (id, ov) in currentOverlays where newMap[id] == nil {
+                mapView.removeOverlay(ov)
+            }
+
+            let toAdd = newMap.values.filter { currentOverlays[$0.connection.id] == nil }
+            if !toAdd.isEmpty { mapView.addOverlays(Array(toAdd)) }
+
+            if selectionChanged {
+                for ov in newMap.values {
+                    mapView.renderer(for: ov)?.setNeedsDisplay()
+                }
+            }
+
+            currentOverlays = newMap
+            lastConnectionIDs = visibleIDs
             lastSelectedProcess = selectedProcess
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-            if let polyline = overlay as? MKPolyline {
-                let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = overlayColors[polyline] ?? .systemBlue
-                renderer.lineWidth = 3
-                renderer.alpha = overlayAlphas[polyline] ?? 0.6
-                return renderer
+            if let connOverlay = overlay as? ConnectionOverlay {
+                return ConnectionOverlayRenderer(connOverlay)
             }
             return MKOverlayRenderer(overlay: overlay)
         }
 
         func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-            if let loc = locations.last { localCoordinate = loc.coordinate; mapProxy?.originCoordinate = loc.coordinate }
+            if let loc = locations.last {
+                localCoordinate = loc.coordinate
+                mapProxy?.originCoordinate = loc.coordinate
+            }
         }
         func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
             if manager.authorizationStatus == .authorizedAlways { manager.requestLocation() }
         }
-
-        func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
-            hideTooltip()
-        }
-
-        // MARK: - Hover Tooltip
-
-        func setupTracking(mapView: MKMapView) {
-            mapView.subviews.compactMap { $0 as? MouseTrackingView }.forEach { $0.removeFromSuperview() }
-            let overlay = MouseTrackingView(coordinator: self)
-            overlay.frame = mapView.bounds
-            overlay.autoresizingMask = [.width, .height]
-            mapView.addSubview(overlay)
-            let area = NSTrackingArea(
-                rect: overlay.bounds,
-                options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
-                owner: overlay,
-                userInfo: nil
-            )
-            overlay.addTrackingArea(area)
-            trackingArea = area
-        }
-
-        func handleMouseMoved(point: CGPoint, in mapView: MKMapView) {
-            if let conn = findConnection(near: point, in: mapView) {
-                showTooltip(for: conn, at: point, in: mapView)
-            } else {
-                hideTooltip()
-            }
-        }
-
-        func handleMouseExited() {
-            hideTooltip()
-        }
-
-        private func findConnection(near point: CGPoint, in mapView: MKMapView) -> Connection? {
-            let threshold: CGFloat = 12
-
-            for (polyline, conn) in overlayConnections {
-                guard (overlayAlphas[polyline] ?? 0) >= 0.5 else { continue }
-                if distanceToPolyline(polyline, from: point, in: mapView) < threshold { return conn }
-            }
-            return nil
-        }
-
-        private func distanceToPolyline(_ polyline: MKPolyline, from point: CGPoint, in mapView: MKMapView) -> CGFloat {
-            let pts = polyline.points()
-            guard polyline.pointCount >= 2 else { return .infinity }
-            var minDist = CGFloat.infinity
-            for i in 0..<polyline.pointCount - 1 {
-                let p1 = mapView.convert(pts[i].coordinate, toPointTo: mapView)
-                let p2 = mapView.convert(pts[i + 1].coordinate, toPointTo: mapView)
-                let dx = p2.x - p1.x, dy = p2.y - p1.y
-                let lenSq = dx * dx + dy * dy
-                let dist: CGFloat
-                if lenSq == 0 {
-                    dist = hypot(point.x - p1.x, point.y - p1.y)
-                } else {
-                    let t = max(0, min(1, ((point.x - p1.x) * dx + (point.y - p1.y) * dy) / lenSq))
-                    dist = hypot(point.x - (p1.x + t * dx), point.y - (p1.y + t * dy))
-                }
-                minDist = min(minDist, dist)
-            }
-            return minDist
-        }
-
-        private func showTooltip(for conn: Connection, at point: CGPoint, in mapView: MKMapView) {
-            let label: String
-            if conn.remotePort > 0 {
-                label = "\(conn.processName)  ·  \(conn.remoteIP):\(conn.remotePort)"
-            } else {
-                label = "\(conn.processName)  ·  \(conn.remoteIP)"
-            }
-
-            if let existing = tooltipView as? TooltipView, existing.superview == mapView {
-                existing.setText(label)
-                existing.reposition(at: point, in: mapView)
-                return
-            }
-
-            hideTooltip()
-            let tip = TooltipView(label: label)
-            tip.reposition(at: point, in: mapView)
-            mapView.addSubview(tip)
-            tooltipView = tip
-        }
-
-        func hideTooltip() {
-            tooltipView?.removeFromSuperview()
-            tooltipView = nil
-        }
-
-        // MARK: - Curved Path Generation
-
-        private func curvedCoordinates(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D, segments: Int = 40) -> [CLLocationCoordinate2D] {
-            // 计算中点
-            let midLat = (start.latitude + end.latitude) / 2
-            let midLon = (start.longitude + end.longitude) / 2
-
-            // 计算方向向量
-            let dLat = end.latitude - start.latitude
-            let dLon = end.longitude - start.longitude
-            let distance = sqrt(dLat * dLat + dLon * dLon)
-
-            // 垂直方向（逆时针旋转90度）并归一化
-            var perpLat = -dLon
-            var perpLon = dLat
-            let perpLen = sqrt(perpLat * perpLat + perpLon * perpLon)
-            if perpLen > 0 {
-                perpLat /= perpLen
-                perpLon /= perpLen
-            }
-
-            // 控制点 = 中点 + 垂直偏移（直线距离的15%，曲率更小）
-            let offset = distance * 0.15
-            let controlLat = midLat + perpLat * offset
-            let controlLon = midLon + perpLon * offset
-            let controlPoint = CLLocationCoordinate2D(latitude: controlLat, longitude: controlLon)
-
-            // 二次贝塞尔曲线采样
-            var points: [CLLocationCoordinate2D] = []
-            for i in 0...segments {
-                let t = Double(i) / Double(segments)
-                let mt = 1.0 - t
-                let lat = mt * mt * start.latitude + 2.0 * mt * t * controlPoint.latitude + t * t * end.latitude
-                let lon = mt * mt * start.longitude + 2.0 * mt * t * controlPoint.longitude + t * t * end.longitude
-                points.append(CLLocationCoordinate2D(latitude: lat, longitude: lon))
-            }
-            return points
-        }
-    }
-}
-
-// MARK: - Mouse Tracking Overlay
-
-private class MouseTrackingView: NSView {
-    weak var coordinator: MapViewRepresentable.Coordinator?
-
-    init(coordinator: MapViewRepresentable.Coordinator) {
-        self.coordinator = coordinator
-        super.init(frame: .zero)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func mouseMoved(with event: NSEvent) {
-        guard let coordinator = coordinator,
-              let mv = coordinator.trackedMapView else { return }
-        let point = mv.convert(event.locationInWindow, from: nil)
-        coordinator.handleMouseMoved(point: point, in: mv)
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        coordinator?.handleMouseExited()
-    }
-
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }  // pass all clicks through
-}
-
-// MARK: - Tooltip View
-
-private class TooltipView: NSView {
-    private let label = NSTextField(labelWithString: "")
-
-    init(label text: String) {
-        super.init(frame: .zero)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.black.withAlphaComponent(0.75).cgColor
-        layer?.cornerRadius = 6
-
-        label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = .white
-        label.backgroundColor = .clear
-        label.isBezeled = false
-        label.isEditable = false
-        label.lineBreakMode = .byTruncatingTail
-        addSubview(label)
-        setText(text)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    func setText(_ text: String) {
-        label.stringValue = text
-        label.sizeToFit()
-        let pad: CGFloat = 8
-        let size = CGSize(width: label.frame.width + pad * 2, height: label.frame.height + pad)
-        frame.size = size
-        label.frame = CGRect(x: pad, y: pad / 2, width: label.frame.width, height: label.frame.height)
-    }
-
-    func reposition(at point: CGPoint, in parent: NSView) {
-        let offset: CGFloat = 12
-        var origin = CGPoint(x: point.x + offset, y: point.y + offset)
-        // Keep inside parent bounds
-        if origin.x + frame.width > parent.bounds.maxX - 8 {
-            origin.x = point.x - frame.width - offset
-        }
-        if origin.y + frame.height > parent.bounds.maxY - 8 {
-            origin.y = point.y - frame.height - offset
-        }
-        frame.origin = origin
     }
 }

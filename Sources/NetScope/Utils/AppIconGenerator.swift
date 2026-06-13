@@ -6,123 +6,125 @@ enum AppIconGenerator {
         image.lockFocus()
 
         let rect = NSRect(x: 0, y: 0, width: size, height: size)
-        let context = NSGraphicsContext.current!.cgContext
+        let ctx = NSGraphicsContext.current!.cgContext
 
-        // Background gradient
-        let gradient = CGGradient(
+        // ── Background: bright blue → deep indigo (top-left to bottom-right) ──
+        let bgGrad = CGGradient(
             colorsSpace: CGColorSpaceCreateDeviceRGB(),
             colors: [
-                NSColor(calibratedRed: 0.12, green: 0.36, blue: 0.85, alpha: 1.0).cgColor,
-                NSColor(calibratedRed: 0.08, green: 0.22, blue: 0.60, alpha: 1.0).cgColor
+                NSColor(calibratedRed: 0.25, green: 0.55, blue: 1.00, alpha: 1).cgColor,
+                NSColor(calibratedRed: 0.05, green: 0.16, blue: 0.65, alpha: 1).cgColor,
             ] as CFArray,
-            locations: [0.0, 1.0]
+            locations: [0, 1]
         )!
-        context.drawRadialGradient(
-            gradient,
-            startCenter: CGPoint(x: size * 0.35, y: size * 0.65),
+        ctx.drawLinearGradient(bgGrad,
+            start: CGPoint(x: 0,    y: size),
+            end:   CGPoint(x: size, y: 0),
+            options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+
+        // ── Soft highlight (upper-left glow) ──
+        let hlGrad = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(),
+            colors: [
+                NSColor.white.withAlphaComponent(0.20).cgColor,
+                NSColor.white.withAlphaComponent(0.00).cgColor,
+            ] as CFArray,
+            locations: [0, 1]
+        )!
+        ctx.drawRadialGradient(hlGrad,
+            startCenter: CGPoint(x: size * 0.28, y: size * 0.74),
             startRadius: 0,
-            endCenter: CGPoint(x: size * 0.5, y: size * 0.5),
-            endRadius: size * 0.7,
-            options: []
-        )
+            endCenter:   CGPoint(x: size * 0.28, y: size * 0.74),
+            endRadius:   size * 0.50,
+            options: [])
 
-        // Draw globe arcs
-        let center = CGPoint(x: size * 0.5, y: size * 0.5)
-        let globeRadius = size * 0.28
-        let lineWidth = size * 0.025
+        // ── Layout ──
+        let hub = CGPoint(x: size * 0.50, y: size * 0.50)
+        let r   = size * 0.260
 
-        context.setStrokeColor(NSColor.white.withAlphaComponent(0.25).cgColor)
-        context.setLineWidth(lineWidth)
-        context.setLineCap(.round)
-
-        // Horizontal arc
-        let horizontalArc = CGMutablePath()
-        horizontalArc.addArc(center: center, radius: globeRadius, startAngle: 0, endAngle: .pi * 2, clockwise: false)
-        context.addPath(horizontalArc)
-        context.strokePath()
-
-        // Vertical ellipse
-        let verticalPath = CGMutablePath()
-        verticalPath.addEllipse(in: CGRect(
-            x: center.x - globeRadius * 0.35,
-            y: center.y - globeRadius,
-            width: globeRadius * 0.7,
-            height: globeRadius * 2
-        ))
-        context.addPath(verticalPath)
-        context.strokePath()
-
-        // Additional arcs for 3D effect
-        for angle in [CGFloat.pi / 4, -CGFloat.pi / 4] {
-            let arcPath = CGMutablePath()
-            let transform = CGAffineTransform(rotationAngle: angle).translatedBy(x: center.x, y: center.y)
-            arcPath.addEllipse(in: CGRect(
-                x: -globeRadius * 0.35,
-                y: -globeRadius,
-                width: globeRadius * 0.7,
-                height: globeRadius * 2
-            ), transform: transform)
-            context.addPath(arcPath)
-            context.strokePath()
-        }
-
-        // Connection nodes
-        let nodePositions: [(CGFloat, CGFloat)] = [
-            (0.35, 0.55),
-            (0.65, 0.45),
-            (0.50, 0.72),
-            (0.42, 0.35),
-            (0.58, 0.60)
+        // Three satellite nodes: top-left, right, bottom
+        let sats = [
+            CGPoint(x: hub.x - r * 0.82, y: hub.y + r * 0.72),
+            CGPoint(x: hub.x + r * 1.00, y: hub.y + r * 0.08),
+            CGPoint(x: hub.x - r * 0.08, y: hub.y - r * 0.96),
         ]
 
-        let nodeRadius = size * 0.035
-        context.setFillColor(NSColor.white.cgColor)
+        ctx.setLineCap(.round)
+        ctx.setLineJoin(.round)
 
-        for (nx, ny) in nodePositions {
-            let point = CGPoint(x: size * nx, y: size * ny)
-            context.addEllipse(in: CGRect(
-                x: point.x - nodeRadius,
-                y: point.y - nodeRadius,
-                width: nodeRadius * 2,
-                height: nodeRadius * 2
-            ))
-            context.fillPath()
+        // Arcs — subtle drop-shadow pass (offset copy)
+        ctx.setStrokeColor(NSColor.black.withAlphaComponent(0.14).cgColor)
+        ctx.setLineWidth(size * 0.028)
+        for sat in sats {
+            let off = size * 0.005
+            let p = CGMutablePath()
+            p.move(to: CGPoint(x: hub.x, y: hub.y - off))
+            p.addQuadCurve(
+                to:      CGPoint(x: sat.x, y: sat.y - off),
+                control: controlPt(hub, sat, 0.18, offset: CGPoint(x: 0, y: -off)))
+            ctx.addPath(p); ctx.strokePath()
         }
 
-        // Connection lines between nodes
-        context.setStrokeColor(NSColor.white.withAlphaComponent(0.6).cgColor)
-        context.setLineWidth(size * 0.018)
-        context.setLineCap(.round)
-        context.setLineJoin(.round)
-
-        let lines = [
-            (nodePositions[0], nodePositions[1]),
-            (nodePositions[1], nodePositions[2]),
-            (nodePositions[2], nodePositions[4]),
-            (nodePositions[4], nodePositions[3]),
-            (nodePositions[3], nodePositions[0])
-        ]
-
-        for (start, end) in lines {
-            let path = CGMutablePath()
-            path.move(to: CGPoint(x: size * start.0, y: size * start.1))
-            path.addLine(to: CGPoint(x: size * end.0, y: size * end.1))
-            context.addPath(path)
-            context.strokePath()
+        // Arcs — white
+        ctx.setStrokeColor(NSColor.white.withAlphaComponent(0.90).cgColor)
+        ctx.setLineWidth(size * 0.022)
+        for sat in sats {
+            let p = CGMutablePath()
+            p.move(to: hub)
+            p.addQuadCurve(to: sat, control: controlPt(hub, sat, 0.18))
+            ctx.addPath(p); ctx.strokePath()
         }
 
-        // Rounded rect clip
+        // ── Satellite nodes ──
+        let sr = size * 0.050
+        for sat in sats {
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: -size * 0.010),
+                          blur: size * 0.026,
+                          color: NSColor.black.withAlphaComponent(0.28).cgColor)
+            ctx.setFillColor(NSColor.white.withAlphaComponent(0.90).cgColor)
+            ctx.addEllipse(in: CGRect(x: sat.x - sr, y: sat.y - sr, width: sr * 2, height: sr * 2))
+            ctx.fillPath()
+            ctx.restoreGState()
+        }
+
+        // ── Hub node: white disc + blue inner dot ──
+        let hr = size * 0.082
+        ctx.saveGState()
+        ctx.setShadow(offset: CGSize(width: 0, height: -size * 0.016),
+                      blur: size * 0.040,
+                      color: NSColor.black.withAlphaComponent(0.36).cgColor)
+        ctx.setFillColor(NSColor.white.cgColor)
+        ctx.addEllipse(in: CGRect(x: hub.x - hr, y: hub.y - hr, width: hr * 2, height: hr * 2))
+        ctx.fillPath()
+        ctx.restoreGState()
+
+        let ir = size * 0.042
+        ctx.setFillColor(NSColor(calibratedRed: 0.22, green: 0.52, blue: 1.0, alpha: 1).cgColor)
+        ctx.addEllipse(in: CGRect(x: hub.x - ir, y: hub.y - ir, width: ir * 2, height: ir * 2))
+        ctx.fillPath()
+
         image.unlockFocus()
 
-        // Apply rounded corners
-        let roundedImage = NSImage(size: NSSize(width: size, height: size))
-        roundedImage.lockFocus()
-        let cornerRadius = size * 0.22
-        let clipPath = NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius)
-        clipPath.setClip()
-        image.draw(in: rect, from: NSRect(x: 0, y: 0, width: size, height: size), operation: .sourceOver, fraction: 1.0)
-        roundedImage.unlockFocus()
+        // ── Squircle clip (22.5% corner radius — macOS standard) ──
+        let out = NSImage(size: NSSize(width: size, height: size))
+        out.lockFocus()
+        NSBezierPath(roundedRect: rect, xRadius: size * 0.225, yRadius: size * 0.225).setClip()
+        image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        out.unlockFocus()
+        return out
+    }
 
-        return roundedImage
+    /// Perpendicular control point for a gentle outward quadratic arc.
+    private static func controlPt(_ a: CGPoint, _ b: CGPoint, _ curvature: CGFloat,
+                                   offset: CGPoint = .zero) -> CGPoint {
+        let mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+        let dx = b.x - a.x, dy = b.y - a.y
+        let len = sqrt(dx * dx + dy * dy)
+        guard len > 0 else { return CGPoint(x: mx + offset.x, y: my + offset.y) }
+        return CGPoint(
+            x: mx - (dy / len) * len * curvature + offset.x,
+            y: my + (dx / len) * len * curvature + offset.y
+        )
     }
 }
