@@ -18,14 +18,17 @@ class ConnectionStore: ObservableObject {
         "#E3B341", "#A5D6FF", "#FFA198", "#B1F0D4"
     ]
 
-    var processes: [(name: String, pid: Int, count: Int, colorIndex: Int)] {
-        let grouped = Dictionary(grouping: connections) { $0.processName }
-        return grouped.map { (name, conns) in
-            let pid = conns.first?.pid ?? 0
-            let colorIdx = processColorIndex(for: name)
-            return (name: name, pid: pid, count: conns.count, colorIndex: colorIdx)
-        }.sorted { $0.count > $1.count || ($0.count == $1.count && $0.name < $1.name) }
-    }
+    // MARK: - Cached aggregates (recomputed once per update)
+
+    private(set) var processes: [(name: String, pid: Int, count: Int, colorIndex: Int)] = []
+    private(set) var processTraffic: [String: (bytesIn: Int64, bytesOut: Int64)] = [:]
+    private(set) var uniqueProcessCount: Int = 0
+    private(set) var uniqueHostCount: Int = 0
+    private(set) var totalBytesIn: Int64 = 0
+    private(set) var totalBytesOut: Int64 = 0
+    private(set) var connectionsByState: [(state: String, count: Int)] = []
+    private(set) var topProcesses: [(name: String, pid: Int, bytesIn: Int64, bytesOut: Int64)] = []
+    private(set) var topHosts: [(host: String, bytesIn: Int64, bytesOut: Int64)] = []
 
     var filteredConnections: [Connection] {
         if let proc = selectedProcess {
@@ -36,52 +39,61 @@ class ConnectionStore: ObservableObject {
 
     var totalConnectionCount: Int { connections.count }
 
-    // MARK: - Summary Statistics
+    private func recomputeAggregates() {
+        var byProcess: [String: (pid: Int, count: Int, bytesIn: Int64, bytesOut: Int64)] = [:]
+        var byHost: [String: (bytesIn: Int64, bytesOut: Int64)] = [:]
+        var byState: [String: Int] = [:]
+        var totalIn: Int64 = 0
+        var totalOut: Int64 = 0
+        var processSet = Set<String>()
+        var hostSet = Set<String>()
 
-    var uniqueProcessCount: Int {
-        Set(connections.map { $0.processName }).count
-    }
+        for conn in connections {
+            processSet.insert(conn.processName)
+            hostSet.insert(conn.remoteIP)
+            totalIn += conn.bytesIn
+            totalOut += conn.bytesOut
 
-    var uniqueHostCount: Int {
-        Set(connections.map { $0.remoteIP }).count
-    }
+            if var entry = byProcess[conn.processName] {
+                entry.count += 1
+                entry.bytesIn += conn.bytesIn
+                entry.bytesOut += conn.bytesOut
+                byProcess[conn.processName] = entry
+            } else {
+                byProcess[conn.processName] = (pid: conn.pid, count: 1, bytesIn: conn.bytesIn, bytesOut: conn.bytesOut)
+            }
 
-    var totalBytesIn: Int64 {
-        connections.reduce(0) { $0 + $1.bytesIn }
-    }
+            if var h = byHost[conn.remoteIP] {
+                h.bytesIn += conn.bytesIn
+                h.bytesOut += conn.bytesOut
+                byHost[conn.remoteIP] = h
+            } else {
+                byHost[conn.remoteIP] = (conn.bytesIn, conn.bytesOut)
+            }
 
-    var totalBytesOut: Int64 {
-        connections.reduce(0) { $0 + $1.bytesOut }
-    }
-
-    var connectionsByState: [(state: String, count: Int)] {
-        let grouped = Dictionary(grouping: connections) { $0.state }
-        return grouped.map { (state, conns) in
-            (state: state, count: conns.count)
-        }.sorted { $0.count > $1.count }
-    }
-
-    var topProcesses: [(name: String, pid: Int, bytesIn: Int64, bytesOut: Int64)] {
-        let grouped = Dictionary(grouping: connections) { $0.processName }
-        var result: [(name: String, pid: Int, bytesIn: Int64, bytesOut: Int64)] = []
-        for (name, conns) in grouped {
-            let pid = conns.first?.pid ?? 0
-            let bytesIn = conns.reduce(0) { $0 + $1.bytesIn }
-            let bytesOut = conns.reduce(0) { $0 + $1.bytesOut }
-            result.append((name: name, pid: pid, bytesIn: bytesIn, bytesOut: bytesOut))
+            byState[conn.state, default: 0] += 1
         }
-        return result.sorted { $0.bytesIn + $0.bytesOut > $1.bytesIn + $1.bytesOut }
-    }
 
-    var topHosts: [(host: String, bytesIn: Int64, bytesOut: Int64)] {
-        let grouped = Dictionary(grouping: connections) { $0.remoteIP }
-        var result: [(host: String, bytesIn: Int64, bytesOut: Int64)] = []
-        for (host, conns) in grouped {
-            let bytesIn = conns.reduce(0) { $0 + $1.bytesIn }
-            let bytesOut = conns.reduce(0) { $0 + $1.bytesOut }
-            result.append((host: host, bytesIn: bytesIn, bytesOut: bytesOut))
-        }
-        return result.sorted { $0.bytesIn + $0.bytesOut > $1.bytesIn + $1.bytesOut }
+        uniqueProcessCount = processSet.count
+        uniqueHostCount = hostSet.count
+        totalBytesIn = totalIn
+        totalBytesOut = totalOut
+
+        processes = byProcess.map { (name, v) in
+            (name: name, pid: v.pid, count: v.count, colorIndex: processColorIndex(for: name))
+        }.sorted { $0.count > $1.count || ($0.count == $1.count && $0.name < $1.name) }
+
+        processTraffic = byProcess.mapValues { (bytesIn: $0.bytesIn, bytesOut: $0.bytesOut) }
+
+        connectionsByState = byState.map { (state: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count }
+
+        topProcesses = byProcess.map { (name, v) in
+            (name: name, pid: v.pid, bytesIn: v.bytesIn, bytesOut: v.bytesOut)
+        }.sorted { $0.bytesIn + $0.bytesOut > $1.bytesIn + $1.bytesOut }
+
+        topHosts = byHost.map { (host: $0.key, bytesIn: $0.value.bytesIn, bytesOut: $0.value.bytesOut) }
+            .sorted { $0.bytesIn + $0.bytesOut > $1.bytesIn + $1.bytesOut }
     }
 
     func reset() {
@@ -89,6 +101,7 @@ class ConnectionStore: ObservableObject {
         connectionMap = [:]
         queriedIPs = []
         selectedProcess = nil
+        recomputeAggregates()
         // Keep processColors and colorIndex to maintain color consistency across switches
     }
 
@@ -132,7 +145,8 @@ class ConnectionStore: ObservableObject {
         connections = Array(freshMap.values)
             .sorted { $0.processName < $1.processName || ($0.processName == $1.processName && $0.id < $1.id) }
 
-        connectionMap = buildSafeMap(from: Array(freshMap.values))
+        connectionMap = freshMap
+        recomputeAggregates()
 
         if !added.isEmpty {
             Task { await fetchGeoInfo(for: added) }

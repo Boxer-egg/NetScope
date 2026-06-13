@@ -82,30 +82,28 @@ actor TracerouteRunner {
         isRunning = false
     }
 
+    private static let timeoutRegex = try! NSRegularExpression(pattern: #"^\s*(\d+)\s+\*"#)
+    private static let hopRegex = try! NSRegularExpression(pattern: #"^\s*(\d+)\s+(\S+)\s+([\d.]+)\s*ms"#)
+
     static func parseLine(_ line: String) -> TracerouteHop? {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
+        let nsRange = NSRange(trimmed.startIndex..., in: trimmed)
 
         // Timeout line: " 3  * * *"
-        if let timeoutMatch = trimmed.range(of: #"^\s*(\d+)\s+\*"#, options: .regularExpression) {
-            let numStr = trimmed[timeoutMatch].replacingOccurrences(of: #"^\s*(\d+)\s+\*"#,
-                with: "$1", options: .regularExpression)
-            if let num = Int(numStr) {
-                return TracerouteHop(id: num, ip: nil, rtt: nil, geoInfo: nil)
-            }
+        if let match = timeoutRegex.firstMatch(in: trimmed, range: nsRange),
+           let numRange = Range(match.range(at: 1), in: trimmed),
+           let num = Int(trimmed[numRange]) {
+            return TracerouteHop(id: num, ip: nil, rtt: nil, geoInfo: nil)
         }
 
         // Normal hop: " 3  142.251.49.1  14.234 ms"
-        let pattern = #"^\s*(\d+)\s+(\S+)\s+([\d.]+)\s*ms"#
-        if let regex = try? NSRegularExpression(pattern: pattern, options: []),
-           let match = regex.firstMatch(in: trimmed, options: [], range: NSRange(trimmed.startIndex..., in: trimmed)) {
-            let numRange = Range(match.range(at: 1), in: trimmed)!
-            let ipRange = Range(match.range(at: 2), in: trimmed)!
-            let rttRange = Range(match.range(at: 3), in: trimmed)!
-
-            guard let num = Int(trimmed[numRange]),
-                  let rtt = Double(trimmed[rttRange]) else { return nil }
-
+        if let match = hopRegex.firstMatch(in: trimmed, options: [], range: nsRange),
+           let numRange = Range(match.range(at: 1), in: trimmed),
+           let ipRange = Range(match.range(at: 2), in: trimmed),
+           let rttRange = Range(match.range(at: 3), in: trimmed),
+           let num = Int(trimmed[numRange]),
+           let rtt = Double(trimmed[rttRange]) {
             let ip = String(trimmed[ipRange])
             return TracerouteHop(id: num, ip: ip, rtt: rtt, geoInfo: nil)
         }

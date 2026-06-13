@@ -112,10 +112,8 @@ struct ProcessRow: View {
     @EnvironmentObject var store: ConnectionStore
 
     var trafficInfo: (in: Int64, out: Int64) {
-        let processConnections = store.connections.filter { $0.processName == name }
-        let totalIn = processConnections.reduce(0) { $0 + $1.bytesIn }
-        let totalOut = processConnections.reduce(0) { $0 + $1.bytesOut }
-        return (totalIn, totalOut)
+        if let t = store.processTraffic[name] { return (t.bytesIn, t.bytesOut) }
+        return (0, 0)
     }
 
     var nsColor: NSColor {
@@ -215,6 +213,8 @@ struct ProcessConnectionRow: View {
 struct AppIconView: NSViewRepresentable {
     let processName: String
 
+    private static var iconCache: [String: NSImage] = [:]
+
     func makeNSView(context: Context) -> NSImageView {
         let view = NSImageView()
         view.imageScaling = .scaleProportionallyUpOrDown
@@ -229,28 +229,30 @@ struct AppIconView: NSViewRepresentable {
     }
 
     private func iconForProcess(_ name: String) -> NSImage? {
+        if let cached = AppIconView.iconCache[name] { return cached }
+
         let runningApps = NSWorkspace.shared.runningApplications
+        let lowerName = name.lowercased()
 
+        let icon: NSImage?
         if let app = runningApps.first(where: {
-            $0.localizedName?.lowercased() == name.lowercased()
-            || $0.bundleIdentifier?.lowercased() == name.lowercased()
+            $0.localizedName?.lowercased() == lowerName
+            || $0.bundleIdentifier?.lowercased() == lowerName
         }) {
-            return app.icon
-        }
-
-        if let app = runningApps.first(where: {
+            icon = app.icon
+        } else if let app = runningApps.first(where: {
             let locName = $0.localizedName?.lowercased() ?? ""
             let bundleId = $0.bundleIdentifier?.lowercased() ?? ""
-            let lowerName = name.lowercased()
             return bundleId.contains(lowerName) || lowerName.contains(bundleId) || lowerName.contains(locName)
         }) {
-            return app.icon
+            icon = app.icon
+        } else if lowerName.contains("apple") || lowerName.contains("kernel") {
+            icon = NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
+        } else {
+            icon = NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
         }
 
-        if name.lowercased().contains("apple") || name.lowercased().contains("kernel") {
-            return NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
-        }
-
-        return NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
+        AppIconView.iconCache[name] = icon
+        return icon
     }
 }

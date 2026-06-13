@@ -34,6 +34,7 @@ class NettopConnectionSource: ConnectionSource {
     func parseNettopOutput(_ output: String) -> [Connection] {
         var connections: [Connection] = []
         let lines = output.components(separatedBy: .newlines)
+        let runningApps = NSWorkspace.shared.runningApplications  // snapshot once per poll
 
         var currentProcessName = ""
         var currentPid = 0
@@ -63,7 +64,7 @@ class NettopConnectionSource: ConnectionSource {
                 if let pid = Int(afterDot), pid > 0 {
                     let rawName = String(col2[..<lastDot]).trimmingCharacters(in: .whitespaces)
                     currentPid = pid
-                    currentProcessName = resolveFriendlyProcessName(rawName, pid: pid)
+                    currentProcessName = resolveFriendlyProcessName(rawName, pid: pid, runningApps: runningApps)
                 }
             }
         }
@@ -112,9 +113,7 @@ class NettopConnectionSource: ConnectionSource {
 
     // MARK: - Process Name Resolution
 
-    private func resolveFriendlyProcessName(_ rawName: String, pid: Int) -> String {
-        let runningApps = NSWorkspace.shared.runningApplications
-
+    private func resolveFriendlyProcessName(_ rawName: String, pid: Int, runningApps: [NSRunningApplication]) -> String {
         if pid > 0,
            let app = runningApps.first(where: { $0.processIdentifier == pid }),
            let friendlyName = app.localizedName,

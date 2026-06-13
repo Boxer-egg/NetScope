@@ -9,7 +9,7 @@ let package = Package(
         .executable(name: "NetScope", targets: ["NetScope"])
     ],
     dependencies: [
-        .package(url: "https://github.com/zpzlabs/maxminddb-swift.git", branch: "main")
+        .package(url: "https://github.com/zpzlabs/maxminddb-swift.git", revision: "e308871390b0e16cab72de7ff28b9284ee11daf0")
     ],
     targets: [
         .executableTarget(

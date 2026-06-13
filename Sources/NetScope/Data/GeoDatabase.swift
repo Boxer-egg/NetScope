@@ -6,8 +6,9 @@ actor GeoDatabase {
 
     private var reader: MaxMindDBReader?
     private var cache: [String: GeoInfo] = [:]
-    private var cacheCapacity = 2000
-    private var cacheKeys: [String] = []
+    private let cacheCapacity = 2000
+    private var cacheRing: [String] = []  // fixed-capacity ring buffer for FIFO eviction
+    private var cacheRingHead = 0
     private var hasAttemptedLoad = false
 
 
@@ -116,7 +117,14 @@ actor GeoDatabase {
         }
         lastAPITime = Date()
 
-        let url = URL(string: "http://ip-api.com/json/\(ip)?fields=status,message,country,countryCode,city,lat,lon,as,query")!
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "ip-api.com"
+        components.path = "/json/\(ip)"
+        components.queryItems = [
+            URLQueryItem(name: "fields", value: "status,message,country,countryCode,city,lat,lon,as,query")
+        ]
+        guard let url = components.url else { return nil }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -139,11 +147,15 @@ actor GeoDatabase {
     }
 
     private func insertCache(ip: String, geo: GeoInfo) {
-        if cache.count >= cacheCapacity, let oldest = cacheKeys.first {
-            cache.removeValue(forKey: oldest)
-            cacheKeys.removeFirst()
+        if cacheRing.count < cacheCapacity {
+            cacheRing.append(ip)
+        } else {
+            // Overwrite the oldest slot in the ring
+            let evicted = cacheRing[cacheRingHead]
+            cache.removeValue(forKey: evicted)
+            cacheRing[cacheRingHead] = ip
+            cacheRingHead = (cacheRingHead + 1) % cacheCapacity
         }
         cache[ip] = geo
-        cacheKeys.append(ip)
     }
 }
