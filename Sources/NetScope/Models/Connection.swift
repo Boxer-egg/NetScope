@@ -11,6 +11,7 @@ struct Connection: Identifiable, Equatable, Hashable {
     let proto: String
     let state: String
     var geoInfo: GeoInfo?
+    var geoLookupFailed: Bool = false
     var firstSeen: Date
     var lastSeen: Date
 

@@ -11,7 +11,12 @@ struct ProcessListView: View {
         if searchText.isEmpty {
             return processes
         }
-        return processes.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return processes.filter { proc in
+            if proc.name.localizedCaseInsensitiveContains(searchText) { return true }
+            return store.connections.contains {
+                $0.processName == proc.name && $0.remoteIP.localizedCaseInsensitiveContains(searchText)
+            }
+        }
     }
 
     func toggleExpanded(_ name: String) {
@@ -69,32 +74,43 @@ struct ProcessListView: View {
             Divider().padding(.horizontal, 10)
 
             // Process list
-            List {
-                ForEach(filteredProcesses, id: \.name) { proc in
-                    VStack(spacing: 0) {
-                        ProcessRow(
-                            name: proc.name,
-                            count: proc.count,
-                            color: store.processColorsList[proc.colorIndex % store.processColorsList.count],
-                            isSelected: store.selectedProcess == proc.name,
-                            isExpanded: expandedProcesses.contains(proc.name),
-                            onToggleExpand: { toggleExpanded(proc.name) },
-                            onSelect: { store.selectProcess(proc.name) }
-                        )
+            if filteredProcesses.isEmpty {
+                Spacer()
+                Text(searchText.isEmpty
+                     ? String(localized: "No active connections", bundle: .module)
+                     : String(localized: "No matching processes", bundle: .module))
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity)
+                Spacer()
+            } else {
+                List {
+                    ForEach(filteredProcesses, id: \.name) { proc in
+                        VStack(spacing: 0) {
+                            ProcessRow(
+                                name: proc.name,
+                                count: proc.count,
+                                color: store.processColorsList[proc.colorIndex % store.processColorsList.count],
+                                isSelected: store.selectedProcess == proc.name,
+                                isExpanded: expandedProcesses.contains(proc.name),
+                                onToggleExpand: { toggleExpanded(proc.name) },
+                                onSelect: { store.selectProcess(proc.name) }
+                            )
 
-                        if expandedProcesses.contains(proc.name) {
-                            let conns = connections(for: proc.name)
-                            ForEach(conns) { conn in
-                                ProcessConnectionRow(connection: conn)
+                            if expandedProcesses.contains(proc.name) {
+                                let conns = connections(for: proc.name)
+                                ForEach(conns) { conn in
+                                    ProcessConnectionRow(connection: conn)
+                                }
                             }
                         }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                     }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
         }
         .background(Color(NSColor.windowBackgroundColor))
     }

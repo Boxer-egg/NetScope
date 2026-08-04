@@ -2,24 +2,25 @@ import Foundation
 import AppKit
 
 class NettopConnectionSource: ConnectionSource {
-    private let interval: TimeInterval
+    var pollInterval: TimeInterval
     private var pollingTask: Task<Void, Never>?
     var onUpdate: (([Connection]) -> Void)?
+    var onFailure: ((String) -> Void)?
 
     var displayName: String { "nettop" }
 
     init(interval: TimeInterval = 1.0) {
-        self.interval = interval
+        self.pollInterval = interval
     }
 
     func start() {
         stop()
-        pollingTask = Task {
+        pollingTask = Task { [pollInterval] in
             while !Task.isCancelled {
                 let output = shell("/usr/bin/nettop -L 1 -t external")
                 let connections = parseNettopOutput(output)
                 onUpdate?(connections)
-                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(pollInterval * 1_000_000_000))
             }
         }
     }

@@ -43,6 +43,13 @@ class TracerouteStore: ObservableObject {
                 }
             }
             self.isRunning = false
+            if !Task.isCancelled && self.hops.isEmpty {
+                if let launchError = await runner.lastError {
+                    self.errorMessage = String(format: String(localized: "Traceroute failed: %@", bundle: .module), launchError)
+                } else {
+                    self.errorMessage = String(localized: "No route could be traced. The target may be unreachable or blocking probes.", bundle: .module)
+                }
+            }
         }
     }
 

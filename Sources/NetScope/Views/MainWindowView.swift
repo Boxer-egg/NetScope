@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct MainWindowView: View {
     @ObservedObject private var store = AppStore.shared
@@ -88,6 +89,19 @@ struct MainWindowView: View {
             VStack {
                 HStack {
                     Spacer()
+
+                    Button(action: { store.setPaused(!store.isPaused) }) {
+                        Image(systemName: store.isPaused ? "play.fill" : "pause.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(width: 26, height: 20)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.9))
+                    .cornerRadius(4)
+                    .help(store.isPaused
+                          ? String(localized: "Resume Monitoring", bundle: .module)
+                          : String(localized: "Pause Monitoring", bundle: .module))
+
                     Picker("Data Source", selection: $selectedSource) {
                         ForEach(store.availableDataSources, id: \.self) { source in
                             Text(source).tag(source)
@@ -101,9 +115,32 @@ struct MainWindowView: View {
                     .onAppear {
                         selectedSource = store.currentDataSource
                     }
+                    .onChange(of: store.dataSourceWarning) { _ in
+                        selectedSource = store.currentDataSource
+                    }
                     Spacer()
                 }
                 .padding(.top, 8)
+
+                if let warning = store.dataSourceWarning {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text(warning)
+                            .font(.system(size: 11))
+                        Button(action: { store.dismissDataSourceWarning() }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.95))
+                    .cornerRadius(6)
+                    .padding(.top, 4)
+                }
+
                 Spacer()
             }
         }

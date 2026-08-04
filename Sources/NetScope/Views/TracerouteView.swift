@@ -25,6 +25,18 @@ struct TracerouteView: View {
 
             Divider()
 
+            if let error = store.errorMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+
             // Hop list
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {

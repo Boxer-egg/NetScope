@@ -5,6 +5,8 @@ final class ConnectionProviderTests: XCTestCase {
 
     class MockSource: ConnectionSource {
         var onUpdate: (([Connection]) -> Void)?
+        var onFailure: ((String) -> Void)?
+        var pollInterval: TimeInterval = 1.0
         var displayName: String
         var started = false
         var stopped = false
@@ -85,5 +87,31 @@ final class ConnectionProviderTests: XCTestCase {
 
         XCTAssertEqual(receivedConnections?.count, 1)
         XCTAssertEqual(receivedConnections?.first?.remoteIP, "1.2.3.4")
+    }
+
+    func testProviderPropagatesFailures() {
+        let source1 = MockSource(name: "Source1")
+        let provider = ConnectionProvider(sources: [source1])
+
+        var receivedReason: String?
+        provider.onFailure = { reason in
+            receivedReason = reason
+        }
+
+        provider.start()
+        source1.onFailure?("TestFailure")
+
+        XCTAssertEqual(receivedReason, "TestFailure")
+    }
+
+    func testProviderSetsPollIntervalOnAllSources() {
+        let source1 = MockSource(name: "Source1")
+        let source2 = MockSource(name: "Source2")
+        let provider = ConnectionProvider(sources: [source1, source2])
+
+        provider.setPollInterval(5.0)
+
+        XCTAssertEqual(source1.pollInterval, 5.0)
+        XCTAssertEqual(source2.pollInterval, 5.0)
     }
 }

@@ -3,6 +3,8 @@ import Darwin
 
 class NetworkStatisticsSource: ConnectionSource {
     var onUpdate: (([Connection]) -> Void)?
+    var onFailure: ((String) -> Void)?
+    var pollInterval: TimeInterval = 1.0
 
     var displayName: String { "NetworkStatistics" }
 
@@ -19,14 +21,14 @@ class NetworkStatisticsSource: ConnectionSource {
 
     func start() {
         guard loadAPI() else {
-            onUpdate?([])
+            onFailure?("NetworkStatisticsUnavailable")
             return
         }
 
         createManager()
         addAllSources()
 
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
             self?.poll()
         }
         timer?.tolerance = 0.2

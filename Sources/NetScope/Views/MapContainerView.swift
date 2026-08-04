@@ -1,7 +1,6 @@
 import SwiftUI
 import MapKit
 import AppKit
-import CoreLocation
 
 // MARK: - Map View Proxy
 
@@ -180,28 +179,24 @@ struct MapViewRepresentable: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    class Coordinator: NSObject, MKMapViewDelegate, CLLocationManagerDelegate {
+    class Coordinator: NSObject, MKMapViewDelegate {
         weak var mapProxy: MapViewProxy?
         private var currentOverlays: [String: ConnectionOverlay] = [:]
         private var lastConnectionIDs: Set<String> = []
         private var lastSelectedProcess: String? = nil
         private var localCoordinate = CLLocationCoordinate2D(latitude: 39.9, longitude: 116.4)
-        private let locationManager = CLLocationManager()
         private var didInit = false
-
-        override init() {
-            super.init()
-            locationManager.delegate = self
-        }
+        private weak var mapViewRef: MKMapView?
 
         func update(mapView: MKMapView, connections: [Connection], selectedProcess: String?,
                     allConnections: [Connection], processColor: (String) -> String) {
             if !didInit {
                 didInit = true
-                locationManager.requestAlwaysAuthorization()
+                mapViewRef = mapView
                 let region = MKCoordinateRegion(center: localCoordinate,
                                                 span: MKCoordinateSpan(latitudeDelta: 50, longitudeDelta: 80))
                 mapView.setRegion(region, animated: false)
+                resolveOwnLocation()
             }
 
             let connsToShow = (selectedProcess == nil) ? allConnections : connections
@@ -259,14 +254,22 @@ struct MapViewRepresentable: NSViewRepresentable {
             return MKOverlayRenderer(overlay: overlay)
         }
 
-        func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-            if let loc = locations.last {
-                localCoordinate = loc.coordinate
-                mapProxy?.originCoordinate = loc.coordinate
+        private func resolveOwnLocation() {
+            Task { [weak self] in
+                guard let geo = await GeoDatabase.shared.lookupOwnLocation() else { return }
+                await MainActor.run {
+                    guard let self = self else { return }
+                    self.localCoordinate = geo.coordinate
+                    self.mapProxy?.originCoordinate = geo.coordinate
+                    self.mapProxy?.recenterToOrigin()
+                    self.lastConnectionIDs = []
+                    if let mapView = self.mapViewRef {
+                        let overlays = mapView.overlays
+                        mapView.removeOverlays(overlays)
+                        self.currentOverlays = [:]
+                    }
+                }
             }
-        }
-        func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-            if manager.authorizationStatus == .authorizedAlways { manager.requestLocation() }
         }
     }
 }

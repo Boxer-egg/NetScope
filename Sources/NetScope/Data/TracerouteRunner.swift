@@ -3,18 +3,21 @@ import Foundation
 actor TracerouteRunner {
     private var process: Process?
     private var isRunning = false
+    private(set) var lastError: String?
 
     func run(target: String) -> AsyncStream<TracerouteHop> {
         AsyncStream { continuation in
             Task {
                 await cancel()
                 isRunning = true
+                lastError = nil
 
                 let p = Process()
-                p.executableURL = URL(fileURLWithPath: "/usr/sbin/traceroute")
+                p.executableURL = URL(fileURLWithPath: target.contains(":") ? "/usr/sbin/traceroute6" : "/usr/sbin/traceroute")
                 p.arguments = ["-n", "-m", "20", "-q", "1", target]
                 let pipe = Pipe()
                 p.standardOutput = pipe
+                p.standardError = pipe
 
                 p.terminationHandler = { _ in
                     continuation.finish()
@@ -24,6 +27,7 @@ actor TracerouteRunner {
                     try p.run()
                     self.process = p
                 } catch {
+                    lastError = error.localizedDescription
                     continuation.finish()
                     return
                 }

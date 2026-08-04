@@ -17,8 +17,14 @@ actor GeoDatabase {
     private var lastAPITime: Date = .distantPast
     private let minAPIInterval: TimeInterval = 1.5 // ~40 req/min safe margin
     private var pendingLookups: [String: Task<GeoInfo?, Never>] = [:]
+    private var failedIPs: Set<String> = []
+    private let failedIPCapacity = 500
 
     private init() {}
+
+    func setAllowOnlineFallback(_ allowed: Bool) {
+        allowOnlineFallback = allowed
+    }
 
     func loadDatabase() {
         if hasAttemptedLoad && reader != nil { return }
@@ -33,6 +39,7 @@ actor GeoDatabase {
             if FileManager.default.fileExists(atPath: path.path) {
                 do {
                     reader = try MaxMindDBReader(database: path)
+                    failedIPs.removeAll()
                     print("[GeoDatabase] Loaded: \(path.path)")
                     return
                 } catch {
@@ -57,6 +64,10 @@ actor GeoDatabase {
             return cached
         }
 
+        if failedIPs.contains(ip) {
+            return nil
+        }
+
         // Deduplicate concurrent lookups for same IP
         if let pending = pendingLookups[ip] {
             return await pending.value
@@ -70,6 +81,7 @@ actor GeoDatabase {
                 insertCache(ip: ip, geo: result)
             } else {
                 print("[GeoDatabase] Failed to resolve \(ip)")
+                markFailed(ip: ip)
             }
             return result
         }
@@ -144,6 +156,18 @@ actor GeoDatabase {
             print("[GeoDatabase] Online lookup failed for \(ip): \(error)")
         }
         return nil
+    }
+
+    private func markFailed(ip: String) {
+        if failedIPs.count >= failedIPCapacity {
+            failedIPs.removeAll(keepingCapacity: true)
+        }
+        failedIPs.insert(ip)
+    }
+
+    func lookupOwnLocation() async -> GeoInfo? {
+        guard allowOnlineFallback else { return nil }
+        return await lookupOnline(ip: "")
     }
 
     private func insertCache(ip: String, geo: GeoInfo) {

@@ -6,6 +6,7 @@ struct SetupView: View {
     @State private var isDragging = false
     @State private var licenseKey = ""
     @State private var isDownloading = false
+    @State private var downloadProgress: Double = 0
     @State private var errorMessage: String? = nil
 
     var body: some View {
@@ -76,6 +77,17 @@ struct SetupView: View {
                         }
                         .disabled(licenseKey.isEmpty || isDownloading)
                     }
+
+                    if isDownloading {
+                        VStack(spacing: 4) {
+                            ProgressView(value: downloadProgress)
+                            Text(downloadProgress > 0
+                                 ? String(format: String(localized: "Downloading… %.0f%%", bundle: .module), downloadProgress * 100)
+                                 : String(localized: "Downloading…", bundle: .module))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
                 .frame(width: 380)
             }
@@ -89,7 +101,7 @@ struct SetupView: View {
             Spacer()
 
             Button("I'll do this later") {
-                store.isFirstRun = false
+                store.skipSetup()
             }
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
@@ -109,7 +121,7 @@ struct SetupView: View {
                 installDatabase(from: url)
             } else {
                 DispatchQueue.main.async {
-                    self.errorMessage = String(localized: "Please drop the correct GeoLite2-City.mmdb file.", bundle: .module)
+                    self.errorMessage = String(localized: "Please drop the extracted GeoLite2-City.mmdb file (not the .tar.gz archive).", bundle: .module)
                 }
             }
         }
@@ -149,6 +161,7 @@ struct SetupView: View {
         let trimmedKey = licenseKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedKey.isEmpty else { return }
         isDownloading = true
+        downloadProgress = 0
         errorMessage = nil
 
         var components = URLComponents(string: "https://download.maxmind.com/app/geoip_download")!
@@ -165,7 +178,7 @@ struct SetupView: View {
 
         Task {
             do {
-                let (data, response) = try await URLSession.shared.data(from: url)
+                let (bytes, response) = try await URLSession.shared.bytes(from: url)
 
                 guard let httpResponse = response as? HTTPURLResponse else {
                     throw NSError(domain: "NetScope", code: 1,
@@ -182,6 +195,24 @@ struct SetupView: View {
                     throw NSError(domain: "NetScope", code: 1,
                                   userInfo: [NSLocalizedDescriptionKey: String(format: String(localized: "Download failed (HTTP %d). Please try again.", bundle: .module), httpResponse.statusCode)])
                 }
+
+                let expectedLength = response.expectedContentLength
+                var data = Data()
+                data.reserveCapacity(expectedLength > 0 ? Int(expectedLength) : 64 * 1024 * 1024)
+                var buffer: [UInt8] = []
+                buffer.reserveCapacity(262144)
+                for try await byte in bytes {
+                    buffer.append(byte)
+                    if buffer.count >= 262144 {
+                        data.append(contentsOf: buffer)
+                        buffer.removeAll(keepingCapacity: true)
+                        if expectedLength > 0 {
+                            let progress = Double(data.count) / Double(expectedLength)
+                            await MainActor.run { self.downloadProgress = progress }
+                        }
+                    }
+                }
+                data.append(contentsOf: buffer)
 
                 // Validate that data is a tar.gz (magic number: 1f 8b)
                 guard data.count > 2, data[0] == 0x1f, data[1] == 0x8b else {

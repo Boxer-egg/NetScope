@@ -6,14 +6,6 @@ struct DetailPanelView: View {
     @EnvironmentObject var tracerouteStore: TracerouteStore
     @State private var selectedConnectionID: String? = nil
 
-    var filteredConnections: [Connection] {
-        return connectionStore.filteredConnections
-    }
-
-    var processName: String {
-        return connectionStore.selectedProcess ?? "All Processes"
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -106,16 +98,21 @@ struct SummarySection: View {
 
             HStack(spacing: 8) {
                 TrafficCard(
-                    label: "↓ Received",
-                    value: formatBytes(totalIn),
+                    label: String(localized: "↓ Received /s", bundle: .module),
+                    value: Connection.formatRate(totalIn),
                     color: Color(NSColor.systemBlue)
                 )
                 TrafficCard(
-                    label: "↑ Sent",
-                    value: formatBytes(totalOut),
+                    label: String(localized: "↑ Sent /s", bundle: .module),
+                    value: Connection.formatRate(totalOut),
                     color: Color(NSColor.systemRed)
                 )
             }
+
+            Text(String(format: String(localized: "Since launch: ↓ %@ · ↑ %@", bundle: .module),
+                        formatBytes(store.sessionBytesIn), formatBytes(store.sessionBytesOut)))
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
         }
     }
 
@@ -165,16 +162,22 @@ struct ConnectionsStateSection: View {
                 .filter { $0.state != "Unknown" }
                 .reduce(into: [:]) { counts, conn in counts[conn.state, default: 0] += 1 }
 
-            ForEach(states.sorted { $0.value > $1.value }, id: \.key) { state, count in
-                HStack {
-                    Circle()
-                        .fill(stateColor(state))
-                        .frame(width: 6, height: 6)
-                    Text(state)
-                        .font(.system(size: 11))
-                    Spacer()
-                    Text("\(count)")
-                        .font(.system(size: 11, weight: .medium))
+            if states.isEmpty {
+                Text(String(localized: "No active connections", bundle: .module))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(states.sorted { $0.value > $1.value }, id: \.key) { state, count in
+                    HStack {
+                        Circle()
+                            .fill(stateColor(state))
+                            .frame(width: 6, height: 6)
+                        Text(state)
+                            .font(.system(size: 11))
+                        Spacer()
+                        Text("\(count)")
+                            .font(.system(size: 11, weight: .medium))
+                    }
                 }
             }
         }
@@ -258,6 +261,12 @@ struct TopHostsSection: View {
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
+                .contextMenu {
+                    Button(String(localized: "Copy IP", bundle: .module)) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(host.host, forType: .string)
+                    }
+                }
             }
         }
     }
@@ -275,18 +284,98 @@ struct TopHostsSection: View {
 
 // MARK: - Connection List Section
 
+enum ConnectionSortOrder: String, CaseIterable {
+    case traffic, host, port, state
+
+    var displayName: String {
+        switch self {
+        case .traffic: return String(localized: "Sort: Traffic", bundle: .module)
+        case .host: return String(localized: "Sort: Host", bundle: .module)
+        case .port: return String(localized: "Sort: Port", bundle: .module)
+        case .state: return String(localized: "Sort: State", bundle: .module)
+        }
+    }
+}
+
 struct ConnectionListSection: View {
     @Binding var selectedConnectionID: String?
     @EnvironmentObject var store: ConnectionStore
     @EnvironmentObject var tracerouteStore: TracerouteStore
+    @State private var sortOrder: ConnectionSortOrder = .traffic
+    @State private var exportError: String? = nil
+
+    var sortedConnections: [Connection] {
+        let conns = store.filteredConnections
+        switch sortOrder {
+        case .traffic:
+            return conns.sorted { $0.bytesIn + $0.bytesOut > $1.bytesIn + $1.bytesOut }
+        case .host:
+            return conns.sorted { $0.remoteIP < $1.remoteIP }
+        case .port:
+            return conns.sorted { $0.remotePort < $1.remotePort }
+        case .state:
+            return conns.sorted { $0.state < $1.state }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Connections Detail")
-                .font(.system(size: 12, weight: .semibold))
+            HStack {
+                Text("Connections Detail")
+                    .font(.system(size: 12, weight: .semibold))
 
-            ForEach(store.filteredConnections) { conn in
-                connectionItem(for: conn)
+                Spacer()
+
+                Menu {
+                    ForEach(ConnectionSortOrder.allCases, id: \.self) { order in
+                        Button(order.displayName) { sortOrder = order }
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 10))
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(width: 20)
+                .help(String(localized: "Sort connections", bundle: .module))
+
+                Button(action: exportCSV) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 10))
+                }
+                .buttonStyle(.plain)
+                .help(String(localized: "Export connections as CSV", bundle: .module))
+                .disabled(store.filteredConnections.isEmpty)
+            }
+
+            if store.isLoading && store.connections.isEmpty {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(String(localized: "Loading connections…", bundle: .module))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+            } else if store.filteredConnections.isEmpty {
+                Text(String(localized: "No active connections", bundle: .module))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            } else {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(sortedConnections) { conn in
+                        connectionItem(for: conn)
+                    }
+                }
+            }
+
+            if let error = exportError {
+                Text(error)
+                    .font(.system(size: 10))
+                    .foregroundColor(.red)
             }
         }
     }
@@ -301,22 +390,141 @@ struct ConnectionListSection: View {
             )
             .contentShape(Rectangle())
             .onTapGesture {
-                if selectedConnectionID == conn.id {
-                    selectedConnectionID = nil
-                    tracerouteStore.clear()
-                } else {
-                    selectedConnectionID = conn.id
-                    tracerouteStore.startTraceroute(for: conn)
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    if selectedConnectionID == conn.id {
+                        selectedConnectionID = nil
+                    } else {
+                        selectedConnectionID = conn.id
+                    }
+                }
+            }
+            .contextMenu {
+                Button(String(localized: "Copy IP", bundle: .module)) {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(conn.remoteIP, forType: .string)
+                }
+                Button(String(localized: "Copy Address", bundle: .module)) {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString("\(conn.remoteIP):\(conn.remotePort)", forType: .string)
                 }
             }
 
             if selectedConnectionID == conn.id {
-                TracerouteView()
-                    .environmentObject(tracerouteStore)
+                ConnectionDetailView(connection: conn)
                     .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)),
                                             removal: .opacity))
+
+                if tracerouteStore.selectedConnectionID == conn.id {
+                    TracerouteView()
+                        .environmentObject(tracerouteStore)
+                        .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)),
+                                                removal: .opacity))
+                }
             }
         }
+    }
+
+    private func exportCSV() {
+        exportError = nil
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.commaSeparatedText]
+        panel.nameFieldStringValue = "netscope-connections.csv"
+        panel.canCreateDirectories = true
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        var lines = ["process,pid,proto,local_port,remote_ip,remote_port,state,bytes_in_interval,bytes_out_interval,country,city"]
+        let conns = store.filteredConnections
+        for conn in conns {
+            let country = conn.geoInfo?.country ?? ""
+            let city = conn.geoInfo?.city ?? ""
+            let row = [
+                Self.csvEscape(conn.processName),
+                "\(conn.pid)",
+                conn.proto,
+                "\(conn.localPort)",
+                conn.remoteIP,
+                "\(conn.remotePort)",
+                conn.state,
+                "\(conn.bytesIn)",
+                "\(conn.bytesOut)",
+                Self.csvEscape(country),
+                Self.csvEscape(city)
+            ].joined(separator: ",")
+            lines.append(row)
+        }
+
+        do {
+            try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            exportError = String(format: String(localized: "Export failed: %@", bundle: .module), error.localizedDescription)
+        }
+    }
+
+    private static func csvEscape(_ value: String) -> String {
+        if value.contains(",") || value.contains("\"") || value.contains("\n") {
+            return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+        }
+        return value
+    }
+}
+
+// MARK: - Connection Detail (expanded)
+
+struct ConnectionDetailView: View {
+    let connection: Connection
+    @EnvironmentObject var tracerouteStore: TracerouteStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            detailRow(String(localized: "Process", bundle: .module), "\(connection.processName) (\(connection.pid))")
+            detailRow(String(localized: "Local Port", bundle: .module), "\(connection.localPort)")
+            if let geo = connection.geoInfo, let asn = geo.asn, !asn.isEmpty {
+                detailRow(String(localized: "ASN", bundle: .module), asn)
+            }
+            detailRow(String(localized: "First Seen", bundle: .module), Self.timeFormatter.string(from: connection.firstSeen))
+            detailRow(String(localized: "Total In / Out", bundle: .module),
+                      "\(Self.formatBytes(connection.rawBytesIn)) / \(Self.formatBytes(connection.rawBytesOut))")
+
+            HStack {
+                Spacer()
+                Button(String(localized: "Run Traceroute", bundle: .module)) {
+                    tracerouteStore.startTraceroute(for: connection)
+                }
+                .controlSize(.small)
+            }
+            .padding(.top, 2)
+        }
+        .font(.system(size: 10))
+        .padding(.leading, 14)
+        .padding(.vertical, 4)
+        .foregroundColor(.secondary)
+    }
+
+    private func detailRow(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 6) {
+            Text(label + ":")
+                .frame(width: 90, alignment: .trailing)
+            Text(value)
+                .foregroundColor(.primary)
+            Spacer()
+        }
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        return f
+    }()
+
+    private static func formatBytes(_ bytes: Int64) -> String {
+        let kb = Double(bytes) / 1024.0
+        if kb < 1 { return "\(bytes) B" }
+        let mb = kb / 1024.0
+        if mb < 1 { return String(format: "%.0f KB", kb) }
+        let gb = mb / 1024.0
+        if gb < 1 { return String(format: "%.1f MB", mb) }
+        return String(format: "%.1f GB", gb)
     }
 }
 
@@ -352,6 +560,10 @@ struct ConnectionRow: View {
                     }
                 } else if isPrivateIP(connection.remoteIP) {
                     Text("Private / Local")
+                        .font(.system(size: 10, weight: .light))
+                        .foregroundColor(.secondary)
+                } else if connection.geoLookupFailed {
+                    Text("Location unavailable")
                         .font(.system(size: 10, weight: .light))
                         .foregroundColor(.secondary)
                 } else {

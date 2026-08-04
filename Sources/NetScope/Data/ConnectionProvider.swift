@@ -4,6 +4,7 @@ import Combine
 class ConnectionProvider: ObservableObject {
     @Published private(set) var activeSource: ConnectionSource
     var onUpdate: (([Connection]) -> Void)?
+    var onFailure: ((String) -> Void)?
 
     private let sources: [ConnectionSource]
 
@@ -14,15 +15,25 @@ class ConnectionProvider: ObservableObject {
     }
 
     func start() {
-        activeSource.onUpdate = { [weak self] connections in
-            self?.onUpdate?(connections)
-        }
+        wireCallbacks(for: activeSource)
         activeSource.start()
     }
 
     func stop() {
         activeSource.onUpdate = nil
+        activeSource.onFailure = nil
         activeSource.stop()
+    }
+
+    func restart() {
+        activeSource.stop()
+        activeSource.start()
+    }
+
+    func setPollInterval(_ interval: TimeInterval) {
+        for source in sources {
+            source.pollInterval = interval
+        }
     }
 
     func switchTo(sourceNamed name: String) {
@@ -33,12 +44,20 @@ class ConnectionProvider: ObservableObject {
 
         activeSource.stop()
         activeSource.onUpdate = nil
+        activeSource.onFailure = nil
 
         activeSource = newSource
-        activeSource.onUpdate = { [weak self] connections in
+        wireCallbacks(for: activeSource)
+        activeSource.start()
+    }
+
+    private func wireCallbacks(for source: ConnectionSource) {
+        source.onUpdate = { [weak self] connections in
             self?.onUpdate?(connections)
         }
-        activeSource.start()
+        source.onFailure = { [weak self] reason in
+            self?.onFailure?(reason)
+        }
     }
 
     var availableSources: [String] {

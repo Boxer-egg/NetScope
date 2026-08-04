@@ -8,7 +8,7 @@ struct NetScopeApp: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsView()
         }
         .commands {
             CommandGroup(replacing: .appInfo) {
@@ -50,7 +50,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 final class MenuBarController: NSObject, ObservableObject {
     private let statusItem: NSStatusItem
     private var window: NSWindow?
+    private var popover: NSPopover?
     private var cancellables = Set<AnyCancellable>()
+    private static let frameAutosaveName = NSWindow.FrameAutosaveName("NetScopeMainWindow")
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -85,20 +87,66 @@ final class MenuBarController: NSObject, ObservableObject {
     }
 
     @objc private func handleClick(_ sender: NSStatusBarButton) {
-        let event = NSApp.currentEvent!
+        guard let event = NSApp.currentEvent else { return }
         if event.type == .rightMouseUp {
+            closePopover()
             showContextMenu(sender)
         } else {
-            toggleWindow()
+            togglePopover(sender)
         }
     }
+
+    // MARK: - Quick View Popover
+
+    private func togglePopover(_ sender: NSStatusBarButton) {
+        if let popover = popover, popover.isShown {
+            closePopover()
+            return
+        }
+
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.contentSize = NSSize(width: 300, height: 340)
+        popover.contentViewController = NSHostingController(
+            rootView: MenuBarPopoverView(
+                onOpenWindow: { [weak self] in
+                    self?.closePopover()
+                    self?.showWindow()
+                },
+                onQuit: {
+                    NSApp.terminate(nil)
+                }
+            )
+            .environmentObject(AppStore.shared)
+            .environmentObject(AppStore.shared.connectionStore)
+        )
+        popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+        self.popover = popover
+    }
+
+    private func closePopover() {
+        popover?.performClose(nil)
+        popover = nil
+    }
+
+    // MARK: - Context Menu
 
     private func showContextMenu(_ sender: NSStatusBarButton) {
         let menu = NSMenu()
 
-        let openItem = NSMenuItem(title: String(localized: "Open NetScope", bundle: .module), action: #selector(toggleWindow), keyEquivalent: "")
+        let openItem = NSMenuItem(title: String(localized: "Open NetScope", bundle: .module), action: #selector(openWindowAction), keyEquivalent: "")
         openItem.target = self
         menu.addItem(openItem)
+
+        let pauseItem = NSMenuItem(
+            title: AppStore.shared.isPaused
+                ? String(localized: "Resume Monitoring", bundle: .module)
+                : String(localized: "Pause Monitoring", bundle: .module),
+            action: #selector(togglePause),
+            keyEquivalent: ""
+        )
+        pauseItem.target = self
+        menu.addItem(pauseItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -116,22 +164,19 @@ final class MenuBarController: NSObject, ObservableObject {
         menu.popUp(positioning: nil, at: point, in: sender)
     }
 
+    @objc private func openWindowAction() {
+        showWindow()
+    }
+
+    @objc private func togglePause() {
+        AppStore.shared.setPaused(!AppStore.shared.isPaused)
+    }
+
+    // MARK: - Main Window
+
     func showWindow() {
         if let window = window {
             if !window.isVisible {
-                window.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
-            }
-        } else {
-            createWindow()
-        }
-    }
-
-    @objc private func toggleWindow() {
-        if let window = window {
-            if window.isVisible {
-                window.orderOut(nil)
-            } else {
                 window.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
             }
@@ -153,10 +198,25 @@ final class MenuBarController: NSObject, ObservableObject {
         window?.title = String(localized: "NetScope", bundle: .module)
         window?.contentView = NSHostingView(rootView: contentView)
         window?.minSize = NSSize(width: 900, height: 560)
-        window?.setContentSize(NSSize(width: 1400, height: 900))
         window?.isReleasedWhenClosed = false
-        window?.center()
-        window?.makeKeyAndOrderFront(nil)
+
+        if let window = window {
+            window.setFrameAutosaveName(Self.frameAutosaveName)
+            if !window.setFrameUsingName(Self.frameAutosaveName) {
+                let defaultSize = NSSize(width: 1400, height: 900)
+                if let screen = NSScreen.main?.visibleFrame {
+                    let fitted = NSSize(
+                        width: min(defaultSize.width, screen.width * 0.9),
+                        height: min(defaultSize.height, screen.height * 0.9)
+                    )
+                    window.setContentSize(fitted)
+                } else {
+                    window.setContentSize(defaultSize)
+                }
+                window.center()
+            }
+            window.makeKeyAndOrderFront(nil)
+        }
         NSApp.activate(ignoringOtherApps: true)
 
         // Add titlebar accessory button for toggling detail panel
@@ -187,7 +247,12 @@ final class MenuBarController: NSObject, ObservableObject {
     }
 
     @objc private func showPreferences() {
-        // TODO: Show preferences window
+        if #available(macOS 14, *) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } else {
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        }
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func quit() {

@@ -53,18 +53,25 @@ Sources/NetScope/
 │   ├── GeoInfo.swift              # GeoIP location data
 │   └── TracerouteHop.swift        # Traceroute hop model
 ├── Data/
-│   ├── ConnectionPoller.swift     # nettop parser & background polling
-│   ├── GeoDatabase.swift          # MaxMind DB reader + online fallback
-│   └── TracerouteRunner.swift     # ICMP traceroute execution
+│   ├── ConnectionSource.swift     # Source protocol (update/failure callbacks, poll interval)
+│   ├── ConnectionProvider.swift   # Source switching, restart, failure routing
+│   ├── NetworkStatisticsSource.swift  # Private NetworkStatistics.framework source (default)
+│   ├── NettopConnectionSource.swift   # nettop parser & background polling (fallback)
+│   ├── GeoDatabase.swift          # MaxMind DB reader + online fallback + negative cache
+│   ├── TracerouteRunner.swift     # traceroute/traceroute6 execution
+│   └── IPUtils.swift              # Private-IP detection, shell helper
 ├── Stores/
-│   ├── AppStore.swift             # Global app state coordinator
-│   ├── ConnectionStore.swift      # Connection aggregation & geo lookup
-│   └── TracerouteStore.swift      # Traceroute state management
+│   ├── AppStore.swift             # Global state, pause/resume, source fallback
+│   ├── ConnectionStore.swift      # Connection aggregation, session totals, geo lookup
+│   ├── TracerouteStore.swift      # Traceroute state management
+│   └── SettingsStore.swift        # Persisted preferences (interval, privacy, setup skip)
 └── Views/
     ├── MainWindowView.swift       # ZStack overlay layout with sliding panels
     ├── MapContainerView.swift     # MKMapView representable with Bezier curves
     ├── ProcessListView.swift      # Left panel: process list with traffic stats
-    ├── DetailPanelView.swift      # Right panel: summary, states, hosts, connections
+    ├── DetailPanelView.swift      # Right panel: summary, states, hosts, connections, export
+    ├── MenuBarPopoverView.swift   # Menu bar quick view (top talkers, pause, quit)
+    ├── SettingsView.swift         # Preferences window
     ├── SetupView.swift            # First-run onboarding (drag-drop / license key)
     └── TracerouteView.swift       # Traceroute result display
 ```

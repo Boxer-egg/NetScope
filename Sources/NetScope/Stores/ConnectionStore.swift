@@ -29,6 +29,8 @@ class ConnectionStore: ObservableObject {
     private(set) var connectionsByState: [(state: String, count: Int)] = []
     private(set) var topProcesses: [(name: String, pid: Int, bytesIn: Int64, bytesOut: Int64)] = []
     private(set) var topHosts: [(host: String, bytesIn: Int64, bytesOut: Int64)] = []
+    private(set) var sessionBytesIn: Int64 = 0
+    private(set) var sessionBytesOut: Int64 = 0
 
     var filteredConnections: [Connection] {
         if let proc = selectedProcess {
@@ -101,12 +103,15 @@ class ConnectionStore: ObservableObject {
         connectionMap = [:]
         queriedIPs = []
         selectedProcess = nil
+        sessionBytesIn = 0
+        sessionBytesOut = 0
         recomputeAggregates()
         // Keep processColors and colorIndex to maintain color consistency across switches
     }
 
     func update(with fresh: [Connection]) {
         let now = Date()
+        isLoading = false
 
         var freshMap = buildSafeMap(from: fresh)
         var added: [Connection] = []
@@ -116,6 +121,7 @@ class ConnectionStore: ObservableObject {
             if let existing = connectionMap[id] {
                 conn.firstSeen = existing.firstSeen
                 conn.geoInfo = existing.geoInfo
+                conn.geoLookupFailed = existing.geoLookupFailed
                 conn.lastSeen = now
 
                 // Calculate delta from raw cumulative values
@@ -123,8 +129,10 @@ class ConnectionStore: ObservableObject {
                 let deltaOut = conn.rawBytesOut - existing.rawBytesOut
                 conn.bytesIn = deltaIn >= 0 ? deltaIn : 0
                 conn.bytesOut = deltaOut >= 0 ? deltaOut : 0
+                sessionBytesIn += conn.bytesIn
+                sessionBytesOut += conn.bytesOut
 
-                if conn.geoInfo == nil, !queriedIPs.contains(conn.remoteIP) {
+                if conn.geoInfo == nil, !conn.geoLookupFailed, !queriedIPs.contains(conn.remoteIP) {
                     added.append(conn)
                     queriedIPs.insert(conn.remoteIP)
                 }
@@ -134,6 +142,8 @@ class ConnectionStore: ObservableObject {
                 // First appearance: show the initial raw value as the first interval's traffic
                 conn.bytesIn = conn.rawBytesIn
                 conn.bytesOut = conn.rawBytesOut
+                sessionBytesIn += conn.bytesIn
+                sessionBytesOut += conn.bytesOut
                 if !queriedIPs.contains(conn.remoteIP) {
                     added.append(conn)
                     queriedIPs.insert(conn.remoteIP)
@@ -164,10 +174,24 @@ class ConnectionStore: ObservableObject {
             for ip in uniqueIPs {
                 group.addTask {
                     let geo = await GeoDatabase.shared.lookup(ip: ip)
-                    if let geo = geo {
-                        await MainActor.run { self.updateGeoInfoForIP(ip: ip, geo: geo) }
+                    await MainActor.run {
+                        if let geo = geo {
+                            self.updateGeoInfoForIP(ip: ip, geo: geo)
+                        } else if !isPrivateIP(ip) {
+                            self.markGeoFailedForIP(ip)
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    private func markGeoFailedForIP(_ ip: String) {
+        for (id, var conn) in connectionMap where conn.remoteIP == ip {
+            conn.geoLookupFailed = true
+            connectionMap[id] = conn
+            if let idx = connections.firstIndex(where: { $0.id == id }) {
+                connections[idx].geoLookupFailed = true
             }
         }
     }
