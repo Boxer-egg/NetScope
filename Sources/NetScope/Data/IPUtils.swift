@@ -18,33 +18,3 @@ func isPrivateIP(_ ip: String) -> Bool {
     if ip.hasSuffix(".local") || ip == "*.*" { return true }
     return false
 }
-
-/// Executes a shell command and returns its stdout as a string.
-/// Returns empty string on failure.
-func shell(_ command: String, timeout: TimeInterval = 5.0) -> String {
-    let task = Process()
-    let pipe = Pipe()
-    task.standardOutput = pipe
-    task.standardError = pipe
-    task.arguments = ["-c", command]
-    task.executableURL = URL(fileURLWithPath: "/bin/bash")
-    task.environment = ["PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]
-
-    do {
-        try task.run()
-    } catch {
-        return ""
-    }
-
-    // Reliable timeout using DispatchQueue (does not depend on RunLoop)
-    let timeoutWork = DispatchWorkItem {
-        if task.isRunning {
-            task.terminate()
-        }
-    }
-    DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timeoutWork)
-
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    timeoutWork.cancel()
-    return String(data: data, encoding: .utf8) ?? ""
-}

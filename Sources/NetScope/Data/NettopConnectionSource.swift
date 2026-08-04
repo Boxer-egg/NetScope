@@ -3,7 +3,9 @@ import AppKit
 
 class NettopConnectionSource: ConnectionSource {
     var pollInterval: TimeInterval
-    private var pollingTask: Task<Void, Never>?
+    private var task: Task<Void, Never>?
+    private var process: Process?
+    private let processLock = NSLock()
     var onUpdate: (([Connection]) -> Void)?
     var onFailure: ((String) -> Void)?
 
@@ -15,19 +17,88 @@ class NettopConnectionSource: ConnectionSource {
 
     func start() {
         stop()
-        pollingTask = Task { [pollInterval] in
-            while !Task.isCancelled {
-                let output = shell("/usr/bin/nettop -L 1 -t external")
-                let connections = parseNettopOutput(output)
-                onUpdate?(connections)
-                try? await Task.sleep(nanoseconds: UInt64(pollInterval * 1_000_000_000))
-            }
+        task = Task { [weak self] in
+            await self?.runLoop()
         }
     }
 
     func stop() {
-        pollingTask?.cancel()
-        pollingTask = nil
+        task?.cancel()
+        task = nil
+        processLock.lock()
+        process?.terminate()
+        process = nil
+        processLock.unlock()
+    }
+
+    // MARK: - Continuous Polling
+
+    private func runLoop() async {
+        var backoff: TimeInterval = 0.5
+        while !Task.isCancelled {
+            let succeeded = await runOnce()
+            if Task.isCancelled { break }
+            if !succeeded {
+                try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
+                backoff = min(backoff * 2, 5)
+            } else {
+                backoff = 0.5
+            }
+        }
+    }
+
+    /// Spawns a single long-lived `nettop -L 0` process and streams its CSV
+    /// output until it exits. Emits one update per sample batch.
+    private func runOnce() async -> Bool {
+        let p = Process()
+        let pipe = Pipe()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/nettop")
+        p.arguments = ["-L", "0", "-x", "-t", "external", "-s", "\(max(1, Int(pollInterval.rounded())))"]
+        p.standardOutput = pipe
+        p.standardError = FileHandle.nullDevice
+
+        do {
+            try p.run()
+        } catch {
+            return false
+        }
+
+        processLock.lock()
+        process = p
+        processLock.unlock()
+
+        var batchText = ""
+        var lastTimeToken: String?
+        let handle = pipe.fileHandleForReading
+
+        do {
+            for try await line in handle.bytes.lines {
+                if Task.isCancelled { break }
+                if line.isEmpty { continue }
+
+                let timeToken = String(line.prefix(8))
+                if let last = lastTimeToken, timeToken != last {
+                    if !batchText.isEmpty {
+                        let output = batchText
+                        batchText = ""
+                        onUpdate?(parseNettopOutput(output))
+                    }
+                }
+                lastTimeToken = timeToken
+                batchText += line + "\n"
+            }
+        } catch {
+            batchText = ""
+        }
+
+        if !batchText.isEmpty && !Task.isCancelled {
+            onUpdate?(parseNettopOutput(batchText))
+        }
+
+        processLock.lock()
+        process = nil
+        processLock.unlock()
+        return true
     }
 
     // MARK: - Parser (COLUMN-INDEX BASED, no regex for extraction)
