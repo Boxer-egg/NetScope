@@ -26,6 +26,11 @@ class NetworkStatisticsSource: ConnectionSource {
         }
 
         createManager()
+        guard manager != nil else {
+            onFailure?("NetworkStatisticsUnavailable")
+            cleanupHandles()
+            return
+        }
         addAllSources()
 
         timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
@@ -48,6 +53,10 @@ class NetworkStatisticsSource: ConnectionSource {
         sourceData.removeAll()
         self.manager = nil
         stateLock.unlock()
+        cleanupHandles()
+    }
+
+    private func cleanupHandles() {
         if let handle = handle {
             dlclose(handle)
             self.handle = nil
