@@ -229,7 +229,11 @@ struct ProcessConnectionRow: View {
 struct AppIconView: NSViewRepresentable {
     let processName: String
 
-    private static var iconCache: [String: NSImage] = [:]
+    private static let iconCache: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.countLimit = 200
+        return cache
+    }()
 
     func makeNSView(context: Context) -> NSImageView {
         let view = NSImageView()
@@ -245,7 +249,8 @@ struct AppIconView: NSViewRepresentable {
     }
 
     private func iconForProcess(_ name: String) -> NSImage? {
-        if let cached = AppIconView.iconCache[name] { return cached }
+        let key = name as NSString
+        if let cached = AppIconView.iconCache.object(forKey: key) { return cached }
 
         let runningApps = NSWorkspace.shared.runningApplications
         let lowerName = name.lowercased()
@@ -268,7 +273,9 @@ struct AppIconView: NSViewRepresentable {
             icon = NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
         }
 
-        AppIconView.iconCache[name] = icon
+        if let icon = icon {
+            AppIconView.iconCache.setObject(icon, forKey: key)
+        }
         return icon
     }
 }
