@@ -19,10 +19,6 @@ actor TracerouteRunner {
                 p.standardOutput = pipe
                 p.standardError = pipe
 
-                p.terminationHandler = { _ in
-                    continuation.finish()
-                }
-
                 do {
                     try p.run()
                     self.process = p
