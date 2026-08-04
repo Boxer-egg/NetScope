@@ -32,4 +32,19 @@ final class IPUtilsTests: XCTestCase {
         XCTAssertFalse(isPrivateIP("11.0.0.1"))
         XCTAssertFalse(isPrivateIP("9.0.0.1"))
     }
+
+    func testHostnamesAreNotMisclassified() {
+        XCTAssertFalse(isPrivateIP("fc-server.example.com"))
+        XCTAssertFalse(isPrivateIP("fd-app.internal"))
+        XCTAssertFalse(isPrivateIP("10.weird-name"))
+        XCTAssertFalse(isPrivateIP("172.not-a-number"))
+        XCTAssertFalse(isPrivateIP("example.com"))
+    }
+
+    func testAdditionalPrivateEdgeCases() {
+        XCTAssertTrue(isPrivateIP("127.0.0.2"))
+        XCTAssertTrue(isPrivateIP("10.0.0.255"))
+        XCTAssertFalse(isPrivateIP("010.0.0.1"))
+        XCTAssertFalse(isPrivateIP("1.2.3.4.5"))
+    }
 }
