@@ -176,7 +176,19 @@ class ConnectionStore: ObservableObject {
     }
 
     private func buildSafeMap(from conns: [Connection]) -> [String: Connection] {
-        return Dictionary(conns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var map: [String: Connection] = [:]
+        for conn in conns {
+            if var existing = map[conn.id] {
+                existing.rawBytesIn += conn.rawBytesIn
+                existing.rawBytesOut += conn.rawBytesOut
+                existing.bytesIn += conn.bytesIn
+                existing.bytesOut += conn.bytesOut
+                map[conn.id] = existing
+            } else {
+                map[conn.id] = conn
+            }
+        }
+        return map
     }
 
     private func fetchGeoInfo(for connections: [Connection]) async {
