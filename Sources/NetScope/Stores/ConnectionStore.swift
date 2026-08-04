@@ -20,6 +20,8 @@ class ConnectionStore: ObservableObject {
 
     // MARK: - Cached aggregates (recomputed once per update)
 
+    private(set) var filteredConnections: [Connection] = []
+    private(set) var processConnections: [String: [Connection]] = [:]
     private(set) var processes: [(name: String, pid: Int, count: Int, colorIndex: Int)] = []
     private(set) var processTraffic: [String: (bytesIn: Int64, bytesOut: Int64)] = [:]
     private(set) var uniqueProcessCount: Int = 0
@@ -32,19 +34,21 @@ class ConnectionStore: ObservableObject {
     private(set) var sessionBytesIn: Int64 = 0
     private(set) var sessionBytesOut: Int64 = 0
 
-    var filteredConnections: [Connection] {
-        if let proc = selectedProcess {
-            return connections.filter { $0.processName == proc }
-        }
-        return connections
-    }
-
     var totalConnectionCount: Int { connections.count }
+
+    private func recomputeFiltered() {
+        if let proc = selectedProcess {
+            filteredConnections = connections.filter { $0.processName == proc }
+        } else {
+            filteredConnections = connections
+        }
+    }
 
     private func recomputeAggregates() {
         var byProcess: [String: (pid: Int, count: Int, bytesIn: Int64, bytesOut: Int64)] = [:]
         var byHost: [String: (bytesIn: Int64, bytesOut: Int64)] = [:]
         var byState: [String: Int] = [:]
+        var byProcessConns: [String: [Connection]] = [:]
         var totalIn: Int64 = 0
         var totalOut: Int64 = 0
         var processSet = Set<String>()
@@ -55,6 +59,7 @@ class ConnectionStore: ObservableObject {
             hostSet.insert(conn.remoteIP)
             totalIn += conn.bytesIn
             totalOut += conn.bytesOut
+            byProcessConns[conn.processName, default: []].append(conn)
 
             if var entry = byProcess[conn.processName] {
                 entry.count += 1
@@ -80,6 +85,7 @@ class ConnectionStore: ObservableObject {
         uniqueHostCount = hostSet.count
         totalBytesIn = totalIn
         totalBytesOut = totalOut
+        processConnections = byProcessConns
 
         processes = byProcess.map { (name, v) in
             (name: name, pid: v.pid, count: v.count, colorIndex: processColorIndex(for: name))
@@ -106,6 +112,7 @@ class ConnectionStore: ObservableObject {
         sessionBytesIn = 0
         sessionBytesOut = 0
         recomputeAggregates()
+        recomputeFiltered()
         // Keep processColors and colorIndex to maintain color consistency across switches
     }
 
@@ -157,6 +164,11 @@ class ConnectionStore: ObservableObject {
 
         connectionMap = freshMap
         recomputeAggregates()
+        recomputeFiltered()
+
+        if queriedIPs.count > 5000 {
+            queriedIPs.removeAll(keepingCapacity: true)
+        }
 
         if !added.isEmpty {
             Task { await fetchGeoInfo(for: added) }
@@ -206,6 +218,7 @@ class ConnectionStore: ObservableObject {
                 }
             }
         }
+        recomputeFiltered()
     }
 
     func colorForProcess(_ name: String) -> String {
@@ -221,5 +234,8 @@ class ConnectionStore: ObservableObject {
         return idx
     }
 
-    func selectProcess(_ name: String?) { selectedProcess = name }
+    func selectProcess(_ name: String?) {
+        selectedProcess = name
+        recomputeFiltered()
+    }
 }

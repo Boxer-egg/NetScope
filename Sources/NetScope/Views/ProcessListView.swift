@@ -13,8 +13,8 @@ struct ProcessListView: View {
         }
         return processes.filter { proc in
             if proc.name.localizedCaseInsensitiveContains(searchText) { return true }
-            return store.connections.contains {
-                $0.processName == proc.name && $0.remoteIP.localizedCaseInsensitiveContains(searchText)
+            return (store.processConnections[proc.name] ?? []).contains {
+                $0.remoteIP.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
@@ -28,7 +28,7 @@ struct ProcessListView: View {
     }
 
     func connections(for processName: String) -> [Connection] {
-        store.connections.filter { $0.processName == processName }
+        store.processConnections[processName] ?? []
     }
 
     var body: some View {
