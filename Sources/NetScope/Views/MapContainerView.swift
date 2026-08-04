@@ -187,6 +187,11 @@ struct MapViewRepresentable: NSViewRepresentable {
         private var localCoordinate = CLLocationCoordinate2D(latitude: 39.9, longitude: 116.4)
         private var didInit = false
         private weak var mapViewRef: MKMapView?
+        private var userInteracted = false
+
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            userInteracted = true
+        }
 
         func update(mapView: MKMapView, connections: [Connection], selectedProcess: String?,
                     allConnections: [Connection], processColor: (String) -> String) {
@@ -261,7 +266,9 @@ struct MapViewRepresentable: NSViewRepresentable {
                     guard let self = self else { return }
                     self.localCoordinate = geo.coordinate
                     self.mapProxy?.originCoordinate = geo.coordinate
-                    self.mapProxy?.recenterToOrigin()
+                    if !self.userInteracted {
+                        self.mapProxy?.recenterToOrigin()
+                    }
                     self.lastConnectionIDs = []
                     if let mapView = self.mapViewRef {
                         let overlays = mapView.overlays
