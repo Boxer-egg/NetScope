@@ -8,6 +8,7 @@ class SettingsStore: ObservableObject {
     static let refreshIntervalKey = "refreshInterval"
     static let allowOnlineGeoIPKey = "allowOnlineGeoIP"
     static let hasSkippedSetupKey = "hasSkippedSetup"
+    static let hideSystemProcessesKey = "hideSystemProcesses"
 
     @Published var refreshInterval: TimeInterval {
         didSet { UserDefaults.standard.set(refreshInterval, forKey: Self.refreshIntervalKey) }
@@ -24,11 +25,16 @@ class SettingsStore: ObservableObject {
         didSet { UserDefaults.standard.set(hasSkippedSetup, forKey: Self.hasSkippedSetupKey) }
     }
 
+    @Published var hideSystemProcesses: Bool {
+        didSet { UserDefaults.standard.set(hideSystemProcesses, forKey: Self.hideSystemProcessesKey) }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
         let interval = defaults.double(forKey: Self.refreshIntervalKey)
         self.refreshInterval = interval > 0 ? interval : 1.0
         self.allowOnlineGeoIP = defaults.object(forKey: Self.allowOnlineGeoIPKey) as? Bool ?? true
         self.hasSkippedSetup = defaults.bool(forKey: Self.hasSkippedSetupKey)
+        self.hideSystemProcesses = defaults.bool(forKey: Self.hideSystemProcessesKey)
     }
 }

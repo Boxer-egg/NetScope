@@ -81,3 +81,5 @@
 "Downloading… %.0f%%" = "Wird heruntergeladen… %.0f%%";
 "Traceroute failed: %@" = "Traceroute fehlgeschlagen: %@";
 "No route could be traced. The target may be unreachable or blocking probes." = "Es konnte keine Route verfolgt werden. Das Ziel ist möglicherweise nicht erreichbar oder blockiert Anfragen.";
+"Hide System Processes" = "Systemprozesse ausblenden";
+"Hide connections owned by macOS system processes (daemons, XPC helpers, framework agents)." = "Verbindungen von macOS-Systemprozessen ausblenden (Daemons, XPC-Helper, Framework-Agenten).";

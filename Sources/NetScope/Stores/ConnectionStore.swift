@@ -11,6 +11,7 @@ class ConnectionStore: ObservableObject {
     private var processColors: [String: Int] = [:]
     private var colorIndex = 0
     private var queriedIPs: Set<String> = []
+    private(set) var hideSystemProcesses = false
 
     let processColorsList: [String] = [
         "#58A6FF", "#3FB950", "#F78166", "#D2A8FF",
@@ -116,11 +117,20 @@ class ConnectionStore: ObservableObject {
         // Keep processColors and colorIndex to maintain color consistency across switches
     }
 
+    func setHideSystemProcesses(_ flag: Bool) {
+        hideSystemProcesses = flag
+    }
+
     func update(with fresh: [Connection]) {
         let now = Date()
         isLoading = false
 
-        var freshMap = buildSafeMap(from: fresh)
+        var filtered = fresh
+        if hideSystemProcesses {
+            filtered = filtered.filter { !SystemProcessChecker.isSystemProcess(pid: $0.pid) }
+        }
+
+        var freshMap = buildSafeMap(from: filtered)
         var added: [Connection] = []
 
         for (id, mutConn) in freshMap {

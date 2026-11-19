@@ -51,6 +51,12 @@ class AppStore: ObservableObject {
 
         connectionStore.isLoading = true
         provider.start()
+
+        settings.$hideSystemProcesses
+            .sink { [weak self] flag in
+                self?.connectionStore.setHideSystemProcesses(flag)
+            }
+            .store(in: &cancellables)
     }
 
     private func handleSourceFailure(reason: String) {

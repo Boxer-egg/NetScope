@@ -20,6 +20,11 @@ struct SettingsView: View {
                     get: { store.isPaused },
                     set: { store.setPaused($0) }
                 ))
+
+                Toggle(String(localized: "Hide System Processes", bundle: .module), isOn: $settings.hideSystemProcesses)
+                Text(String(localized: "Hide connections owned by macOS system processes (daemons, XPC helpers, framework agents).", bundle: .module))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
             }
 
             Section(header: Text(String(localized: "Privacy", bundle: .module))) {
