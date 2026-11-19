@@ -10,6 +10,7 @@ class AppStore: ObservableObject {
     @Published var isFirstRun: Bool = false
     @Published var isPaused: Bool = false
     @Published var dataSourceWarning: String? = nil
+    let connectivity = ConnectivityMonitor()
 
     private let provider: ConnectionProvider
     private let settings = SettingsStore.shared
@@ -51,6 +52,7 @@ class AppStore: ObservableObject {
 
         connectionStore.isLoading = true
         provider.start()
+        connectivity.start()
 
         settings.$hideSystemProcesses
             .sink { [weak self] flag in

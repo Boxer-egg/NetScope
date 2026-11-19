@@ -106,7 +106,7 @@ final class MenuBarController: NSObject, ObservableObject {
 
         let popover = NSPopover()
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 300, height: 340)
+        popover.contentSize = NSSize(width: 300, height: 400)
         popover.contentViewController = NSHostingController(
             rootView: MenuBarPopoverView(
                 onOpenWindow: { [weak self] in

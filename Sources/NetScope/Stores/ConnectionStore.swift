@@ -3,15 +3,22 @@ import Combine
 
 @MainActor
 class ConnectionStore: ObservableObject {
+    struct RateSample: Equatable {
+        let bytesIn: Int64
+        let bytesOut: Int64
+    }
+
     @Published var connections: [Connection] = []
     @Published var selectedProcess: String? = nil
     @Published var isLoading = false
+    @Published private(set) var rateHistory: [RateSample] = []
 
     private var connectionMap: [String: Connection] = [:]
     private var processColors: [String: Int] = [:]
     private var colorIndex = 0
     private var queriedIPs: Set<String> = []
     private(set) var hideSystemProcesses = false
+    private let rateHistoryLimit = 600
 
     let processColorsList: [String] = [
         "#58A6FF", "#3FB950", "#F78166", "#D2A8FF",
@@ -112,6 +119,7 @@ class ConnectionStore: ObservableObject {
         selectedProcess = nil
         sessionBytesIn = 0
         sessionBytesOut = 0
+        rateHistory = []
         recomputeAggregates()
         recomputeFiltered()
         // Keep processColors and colorIndex to maintain color consistency across switches
@@ -175,6 +183,11 @@ class ConnectionStore: ObservableObject {
         connectionMap = freshMap
         recomputeAggregates()
         recomputeFiltered()
+
+        rateHistory.append(RateSample(bytesIn: totalBytesIn, bytesOut: totalBytesOut))
+        if rateHistory.count > rateHistoryLimit {
+            rateHistory.removeFirst(rateHistory.count - rateHistoryLimit)
+        }
 
         if queriedIPs.count > 5000 {
             queriedIPs.removeAll(keepingCapacity: true)

@@ -33,11 +33,25 @@ struct MenuBarPopoverView: View {
                 Label("\(store.totalConnectionCount)", systemImage: "link")
                 Label(Connection.formatRate(store.totalBytesIn), systemImage: "arrow.down")
                 Label(Connection.formatRate(store.totalBytesOut), systemImage: "arrow.up")
+                Spacer()
+                if let latency = appStore.connectivity.latency {
+                    Label(String(format: "%.0f ms", latency), systemImage: "dot.radiowaves.left.and.right")
+                } else {
+                    Label(String(localized: "Offline", bundle: .module), systemImage: "wifi.slash")
+                        .foregroundColor(.orange)
+                }
             }
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
+
+            if store.rateHistory.count > 1 {
+                TrafficSparkline(samples: Array(store.rateHistory.suffix(120)))
+                    .frame(height: 44)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+            }
 
             Divider()
 

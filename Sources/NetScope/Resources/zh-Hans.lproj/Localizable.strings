@@ -83,3 +83,4 @@
 "No route could be traced. The target may be unreachable or blocking probes." = "无法追踪路由。目标可能不可达或阻止了探测。";
 "Hide System Processes" = "隐藏系统进程";
 "Hide connections owned by macOS system processes (daemons, XPC helpers, framework agents)." = "隐藏 macOS 系统进程（守护进程、XPC 助手、框架代理）拥有的连接。";
+"Offline" = "离线";
