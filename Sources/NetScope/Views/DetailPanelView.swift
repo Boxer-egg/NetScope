@@ -433,11 +433,12 @@ struct ConnectionListSection: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        var lines = ["process,pid,proto,local_port,remote_ip,remote_port,state,bytes_in_interval,bytes_out_interval,country,city"]
+        var lines = ["process,pid,proto,local_port,remote_ip,remote_port,state,bytes_in_interval,bytes_out_interval,country,city,asn"]
         let conns = store.filteredConnections
         for conn in conns {
             let country = conn.geoInfo?.country ?? ""
             let city = conn.geoInfo?.city ?? ""
+            let asn = conn.geoInfo?.asn ?? ""
             let row = [
                 Self.csvEscape(conn.processName),
                 "\(conn.pid)",
@@ -449,7 +450,8 @@ struct ConnectionListSection: View {
                 "\(conn.bytesIn)",
                 "\(conn.bytesOut)",
                 Self.csvEscape(country),
-                Self.csvEscape(city)
+                Self.csvEscape(city),
+                Self.csvEscape(asn)
             ].joined(separator: ",")
             lines.append(row)
         }
@@ -554,6 +556,12 @@ struct ConnectionRow: View {
                         Text("\(geo.city ?? "") \(geo.country)")
                             .font(.system(size: 11))
                             .foregroundColor(.accentColor)
+                        if let asn = geo.asn, !asn.isEmpty {
+                            Text(asn)
+                                .font(.system(size: 9, weight: .light))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
                         Text(String(format: "%.2f, %.2f", geo.latitude, geo.longitude))
                             .font(.system(size: 9, weight: .light))
                             .foregroundColor(.secondary)
