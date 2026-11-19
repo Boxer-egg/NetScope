@@ -216,9 +216,15 @@ struct ProcessConnectionRow: View {
 
             Spacer()
 
-            Text("\(connection.remotePort)")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
+            if let service = ServiceNames.serviceName(port: connection.remotePort, proto: connection.proto) {
+                Text("\(service)")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            } else {
+                Text("\(connection.remotePort)")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)

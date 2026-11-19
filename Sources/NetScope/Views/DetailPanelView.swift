@@ -575,7 +575,11 @@ struct ConnectionRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(":\(connection.remotePort)")
+                    if let service = ServiceNames.serviceName(port: connection.remotePort, proto: connection.proto) {
+                        Text(":\(connection.remotePort) · \(service)")
+                    } else {
+                        Text(":\(connection.remotePort)")
+                    }
                     Text("•")
                     Text(connection.proto)
                     Text("•")
