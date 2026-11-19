@@ -182,6 +182,30 @@ struct MainWindowView: View {
         .onReceive(NotificationCenter.default.publisher(for: .init("FocusSearch"))) { _ in
             leftPanelVisible = true
         }
+
+        // Keyboard shortcuts (zero-size buttons so SwiftUI registers the key commands)
+        shortcutButton(key: "f", modifiers: .command) {
+            NotificationCenter.default.post(name: .init("FocusSearch"), object: nil)
+        }
+        shortcutButton(key: "e", modifiers: .command) {
+            NotificationCenter.default.post(name: .init("ExportConnections"), object: nil)
+        }
+        shortcutButton(key: ".", modifiers: .command) {
+            store.setPaused(!store.isPaused)
+        }
+        shortcutButton(key: "l", modifiers: [.command, .shift]) {
+            NotificationCenter.default.post(name: .init("ToggleLeftPanel"), object: nil)
+        }
+        shortcutButton(key: "d", modifiers: [.command, .shift]) {
+            NotificationCenter.default.post(name: .init("ToggleDetailPanel"), object: nil)
+        }
+    }
+
+    private func shortcutButton(key: String, modifiers: EventModifiers, action: @escaping () -> Void) -> some View {
+        Button(action: action) { EmptyView() }
+            .keyboardShortcut(KeyEquivalent(Character(key)), modifiers: modifiers)
+            .frame(width: 0, height: 0)
+            .opacity(0)
     }
 }
 

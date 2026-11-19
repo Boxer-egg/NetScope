@@ -393,6 +393,10 @@ struct ConnectionListSection: View {
                     .foregroundColor(.red)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .init("ExportConnections"))) { _ in
+            guard !store.filteredConnections.isEmpty else { return }
+            exportCSV()
+        }
     }
 
     @ViewBuilder
