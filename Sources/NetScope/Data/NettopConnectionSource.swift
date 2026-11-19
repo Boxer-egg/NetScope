@@ -75,6 +75,9 @@ class NettopConnectionSource: ConnectionSource {
             for try await line in handle.bytes.lines {
                 if Task.isCancelled { break }
                 if line.isEmpty { continue }
+                // Skip the CSV header so a header-only batch is never
+                // flushed as a spurious empty update
+                if line.hasPrefix("time,") { continue }
 
                 let timeToken = String(line.prefix(8))
                 if let last = lastTimeToken, timeToken != last {
