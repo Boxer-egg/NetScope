@@ -31,8 +31,8 @@ struct MenuBarPopoverView: View {
 
             HStack(spacing: 12) {
                 Label("\(store.totalConnectionCount)", systemImage: "link")
-                Label(Connection.formatRate(store.totalBytesIn), systemImage: "arrow.down")
-                Label(Connection.formatRate(store.totalBytesOut), systemImage: "arrow.up")
+                Label(store.intervalRate(store.totalBytesIn), systemImage: "arrow.down")
+                Label(store.intervalRate(store.totalBytesOut), systemImage: "arrow.up")
                 Spacer()
                 if let latency = appStore.connectivity.latency {
                     Label(String(format: "%.0f ms", latency), systemImage: "dot.radiowaves.left.and.right")
@@ -76,9 +76,9 @@ struct MenuBarPopoverView: View {
                                 .font(.system(size: 12))
                                 .lineLimit(1)
                             Spacer()
-                            Text("↓\(Connection.formatRate(proc.bytesIn))")
+                            Text("↓\(store.intervalRate(proc.bytesIn))")
                                 .foregroundColor(.secondary)
-                            Text("↑\(Connection.formatRate(proc.bytesOut))")
+                            Text("↑\(store.intervalRate(proc.bytesOut))")
                                 .foregroundColor(.secondary)
                         }
                         .font(.system(size: 10))

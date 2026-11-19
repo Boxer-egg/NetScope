@@ -106,7 +106,6 @@ struct ProcessListView: View {
                             ProcessRow(
                                 name: proc.name,
                                 count: proc.count,
-                                color: store.processColorsList[proc.colorIndex % store.processColorsList.count],
                                 isSelected: store.selectedProcess == proc.name,
                                 isExpanded: expandedProcesses.contains(proc.name),
                                 onToggleExpand: { toggleExpanded(proc.name) },
@@ -135,7 +134,6 @@ struct ProcessListView: View {
 struct ProcessRow: View {
     let name: String
     let count: Int
-    let color: String
     let isSelected: Bool
     let isExpanded: Bool
     let onToggleExpand: () -> Void
@@ -149,7 +147,7 @@ struct ProcessRow: View {
     }
 
     var nsColor: NSColor {
-        NSColor(hex: color) ?? .systemBlue
+        store.nsColorForProcess(name)
     }
 
     var body: some View {
@@ -173,8 +171,8 @@ struct ProcessRow: View {
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
-                    Text("↓\(formatCompactRate(trafficInfo.in))")
-                    Text("↑\(formatCompactRate(trafficInfo.out))")
+                    Text("↓\(store.intervalRate(trafficInfo.in))")
+                    Text("↑\(store.intervalRate(trafficInfo.out))")
                 }
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
@@ -206,13 +204,6 @@ struct ProcessRow: View {
         .onTapGesture {
             onSelect()
         }
-    }
-
-    private func formatCompactRate(_ bytes: Int64) -> String {
-        let kb = Double(bytes) / 1024.0
-        if kb < 0.1 { return "0 B/s" }
-        else if kb < 1024.0 { return String(format: "%.0f KB/s", kb) }
-        else { return String(format: "%.1f MB/s", kb / 1024.0) }
     }
 }
 

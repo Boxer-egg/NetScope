@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import AppKit
 
 @MainActor
 class ConnectionStore: ObservableObject {
@@ -30,6 +31,11 @@ class ConnectionStore: ObservableObject {
 
     private(set) var filteredConnections: [Connection] = []
     private(set) var processConnections: [String: [Connection]] = [:]
+    private(set) var filteredBytesIn: Int64 = 0
+    private(set) var filteredBytesOut: Int64 = 0
+    private(set) var filteredHostCount: Int = 0
+    private(set) var filteredStates: [(state: String, count: Int)] = []
+    private var nsColorCache: [String: NSColor] = [:]
     private(set) var processes: [(name: String, pid: Int, count: Int, colorIndex: Int)] = []
     private(set) var processTraffic: [String: (bytesIn: Int64, bytesOut: Int64)] = [:]
     private(set) var uniqueProcessCount: Int = 0
@@ -50,6 +56,37 @@ class ConnectionStore: ObservableObject {
         } else {
             filteredConnections = connections
         }
+
+        var inSum: Int64 = 0
+        var outSum: Int64 = 0
+        var hosts = Set<String>()
+        var states: [String: Int] = [:]
+        for conn in filteredConnections {
+            inSum += conn.bytesIn
+            outSum += conn.bytesOut
+            hosts.insert(conn.remoteIP)
+            states[conn.state, default: 0] += 1
+        }
+        filteredBytesIn = inSum
+        filteredBytesOut = outSum
+        filteredHostCount = hosts.count
+        filteredStates = states.map { (state: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count }
+    }
+
+    /// Converts per-interval byte counts into a true per-second rate string.
+    func intervalRate(_ bytes: Int64) -> String {
+        let interval = SettingsStore.shared.refreshInterval
+        let perSecond = interval > 0 ? Double(bytes) / interval : Double(bytes)
+        return Connection.formatRate(Int64(perSecond.rounded()))
+    }
+
+    /// Cached NSColor for a process, avoiding per-render hex parsing.
+    func nsColorForProcess(_ name: String) -> NSColor {
+        if let cached = nsColorCache[name] { return cached }
+        let color = NSColor(hex: colorForProcess(name)) ?? .systemBlue
+        nsColorCache[name] = color
+        return color
     }
 
     private func recomputeAggregates() {

@@ -80,19 +80,6 @@ struct SummarySection: View {
         return store.uniqueProcessCount
     }
 
-    var hostCount: Int {
-        let conns = store.filteredConnections
-        return Set(conns.map { $0.remoteIP }).count
-    }
-
-    var totalIn: Int64 {
-        store.filteredConnections.reduce(0) { $0 + $1.bytesIn }
-    }
-
-    var totalOut: Int64 {
-        store.filteredConnections.reduce(0) { $0 + $1.bytesOut }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -103,7 +90,7 @@ struct SummarySection: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(store.selectedProcess ?? "Summary")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("\(processCount) processes · \(hostCount) hosts")
+                    Text("\(processCount) processes · \(store.filteredHostCount) hosts")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -114,12 +101,12 @@ struct SummarySection: View {
             HStack(spacing: 8) {
                 TrafficCard(
                     label: String(localized: "↓ Received /s", bundle: .module),
-                    value: Connection.formatRate(totalIn),
+                    value: store.intervalRate(store.filteredBytesIn),
                     color: Color(NSColor.systemBlue)
                 )
                 TrafficCard(
                     label: String(localized: "↑ Sent /s", bundle: .module),
-                    value: Connection.formatRate(totalOut),
+                    value: store.intervalRate(store.filteredBytesOut),
                     color: Color(NSColor.systemRed)
                 )
             }
@@ -173,24 +160,23 @@ struct ConnectionsStateSection: View {
             Text("Connections")
                 .font(.system(size: 12, weight: .semibold))
 
-            let states = store.filteredConnections
+            let states = store.filteredStates
                 .filter { $0.state != "Unknown" }
-                .reduce(into: [:]) { counts, conn in counts[conn.state, default: 0] += 1 }
 
             if states.isEmpty {
                 Text(String(localized: "No active connections", bundle: .module))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             } else {
-                ForEach(states.sorted { $0.value > $1.value }, id: \.key) { state, count in
+                ForEach(states, id: \.state) { entry in
                     HStack {
                         Circle()
-                            .fill(stateColor(state))
+                            .fill(stateColor(entry.state))
                             .frame(width: 6, height: 6)
-                        Text(state)
+                        Text(entry.state)
                             .font(.system(size: 11))
                         Spacer()
-                        Text("\(count)")
+                        Text("\(entry.count)")
                             .font(.system(size: 11, weight: .medium))
                     }
                 }
@@ -219,6 +205,12 @@ struct TopProcessesSection: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Top Processes")
                 .font(.system(size: 12, weight: .semibold))
+
+            if store.topProcesses.isEmpty {
+                Text(String(localized: "No active connections", bundle: .module))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
 
             ForEach(store.topProcesses.prefix(5), id: \.name) { proc in
                 HStack(spacing: 8) {
@@ -265,6 +257,12 @@ struct TopHostsSection: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Top Hosts")
                 .font(.system(size: 12, weight: .semibold))
+
+            if store.topHosts.isEmpty {
+                Text(String(localized: "No active connections", bundle: .module))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
 
             ForEach(store.topHosts.prefix(5), id: \.host) { host in
                 HStack {
@@ -404,7 +402,7 @@ struct ConnectionListSection: View {
         VStack(spacing: 0) {
             ConnectionRow(
                 connection: conn,
-                color: store.colorForProcess(conn.processName),
+                nsColor: store.nsColorForProcess(conn.processName),
                 isExpanded: selectedConnectionID == conn.id
             )
             .contentShape(Rectangle())
@@ -551,12 +549,10 @@ struct ConnectionDetailView: View {
 
 struct ConnectionRow: View {
     let connection: Connection
-    let color: String
+    let nsColor: NSColor
     let isExpanded: Bool
 
-    var nsColor: NSColor {
-        NSColor(hex: color) ?? .systemBlue
-    }
+    @EnvironmentObject var store: ConnectionStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -616,9 +612,9 @@ struct ConnectionRow: View {
 
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.down")
-                        Text(Connection.formatRate(connection.bytesIn))
+                        Text(store.intervalRate(connection.bytesIn))
                         Image(systemName: "arrow.up")
-                        Text(Connection.formatRate(connection.bytesOut))
+                        Text(store.intervalRate(connection.bytesOut))
                     }
                 }
                 .font(.system(size: 10))

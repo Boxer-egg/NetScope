@@ -37,7 +37,8 @@ struct TracerouteView: View {
                 .padding(.vertical, 8)
             }
 
-            // Hop list
+            // Hop list (fixed height so nested scrolling inside the detail
+            // panel's ScrollView stays predictable)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(store.hops) { hop in
@@ -45,7 +46,7 @@ struct TracerouteView: View {
                     }
                 }
             }
-            .frame(minHeight: 100, maxHeight: 300)
+            .frame(height: min(CGFloat(store.hops.count) * 30 + 8, 210))
 
             Divider()
 
