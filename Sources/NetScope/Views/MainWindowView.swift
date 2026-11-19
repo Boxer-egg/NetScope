@@ -76,7 +76,7 @@ struct MainWindowView: View {
                 }
 
                 if rightPanelVisible {
-                    PanelResizer(width: $rightPanelWidth, range: 240...560)
+                    PanelResizer(width: $rightPanelWidth, range: 240...560, inverted: true)
 
                     DetailPanelView(onCollapse: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { rightPanelVisible = false }
@@ -128,6 +128,8 @@ struct MainWindowView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                     .frame(width: 240)
                     .onChange(of: selectedSource) { newValue in
                         store.switchDataSource(to: newValue)
@@ -213,6 +215,9 @@ struct MainWindowView: View {
 struct PanelResizer: View {
     @Binding var width: Double
     let range: ClosedRange<Double>
+    /// True when the panel is anchored to the window's trailing edge, so
+    /// dragging towards the leading edge grows it.
+    var inverted: Bool = false
 
     @State private var startWidth: Double?
     @State private var isHovering = false
@@ -234,7 +239,7 @@ struct PanelResizer: View {
                 DragGesture(minimumDistance: 1)
                     .onChanged { value in
                         if startWidth == nil { startWidth = width }
-                        let delta = value.location.x - value.startLocation.x
+                        let delta = (value.location.x - value.startLocation.x) * (inverted ? -1 : 1)
                         width = min(max((startWidth ?? width) + delta, range.lowerBound), range.upperBound)
                     }
                     .onEnded { _ in

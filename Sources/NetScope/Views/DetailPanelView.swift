@@ -269,10 +269,12 @@ struct TopHostsSection: View {
                     Text(host.host)
                         .font(.system(size: 11))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer()
                     Text(formatBytes(host.bytesIn + host.bytesOut))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
                 .contextMenu {
                     Button(String(localized: "Copy IP", bundle: .module)) {
@@ -563,6 +565,8 @@ struct ConnectionRow: View {
 
                 Text(connection.remoteIP)
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
                 Spacer()
 
@@ -571,6 +575,7 @@ struct ConnectionRow: View {
                         Text("\(geo.city ?? "") \(geo.country)")
                             .font(.system(size: 11))
                             .foregroundColor(.accentColor)
+                            .lineLimit(1)
                         if let asn = geo.asn, !asn.isEmpty {
                             Text(asn)
                                 .font(.system(size: 9, weight: .light))
@@ -580,50 +585,61 @@ struct ConnectionRow: View {
                         Text(String(format: "%.2f, %.2f", geo.latitude, geo.longitude))
                             .font(.system(size: 9, weight: .light))
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
+                    .fixedSize(horizontal: true, vertical: false)
                 } else if isPrivateIP(connection.remoteIP) {
                     Text("Private / Local")
                         .font(.system(size: 10, weight: .light))
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: true, vertical: false)
                 } else if connection.geoLookupFailed {
                     Text("Location unavailable")
                         .font(.system(size: 10, weight: .light))
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: true, vertical: false)
                 } else {
                     Text("Resolving...")
                         .font(.system(size: 10, weight: .light))
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    if let service = ServiceNames.serviceName(port: connection.remotePort, proto: connection.proto) {
-                        Text(":\(connection.remotePort) · \(service)")
-                    } else {
-                        Text(":\(connection.remotePort)")
-                    }
-                    Text("•")
-                    Text(connection.proto)
-                    Text("•")
-                    Text(connection.state)
+            HStack(spacing: 4) {
+                Text(metaLine)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
 
-                    Spacer()
+                Spacer(minLength: 4)
 
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.down")
-                        Text(store.intervalRate(connection.bytesIn))
-                        Image(systemName: "arrow.up")
-                        Text(store.intervalRate(connection.bytesOut))
-                    }
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.down")
+                    Text(store.intervalRate(connection.bytesIn))
+                    Image(systemName: "arrow.up")
+                    Text(store.intervalRate(connection.bytesOut))
                 }
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.leading, 14)
         }
         .padding(.vertical, 6)
         .background(isExpanded ? Color(nsColor).opacity(0.08) : Color.clear)
         .cornerRadius(4)
+    }
+
+    private var metaLine: String {
+        var parts: [String] = []
+        if let service = ServiceNames.serviceName(port: connection.remotePort, proto: connection.proto) {
+            parts.append(":\(connection.remotePort) · \(service)")
+        } else {
+            parts.append(":\(connection.remotePort)")
+        }
+        parts.append(connection.proto)
+        parts.append(connection.state)
+        return parts.joined(separator: " • ")
     }
 }
