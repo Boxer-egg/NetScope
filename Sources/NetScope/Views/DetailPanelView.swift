@@ -4,10 +4,25 @@ import AppKit
 struct DetailPanelView: View {
     @EnvironmentObject var connectionStore: ConnectionStore
     @EnvironmentObject var tracerouteStore: TracerouteStore
+    var onCollapse: (() -> Void)? = nil
     @State private var selectedConnectionID: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
+            if let onCollapse = onCollapse {
+                HStack {
+                    Spacer()
+                    Button(action: onCollapse) {
+                        Image(systemName: "sidebar.trailing")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(String(localized: "Hide Panel", bundle: .module))
+                    .padding(.top, 8)
+                    .padding(.trailing, 10)
+                }
+            }
             ScrollView {
                 VStack(spacing: 0) {
                     // Summary Section

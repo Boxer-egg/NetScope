@@ -84,3 +84,5 @@
 "Hide System Processes" = "Systemprozesse ausblenden";
 "Hide connections owned by macOS system processes (daemons, XPC helpers, framework agents)." = "Verbindungen von macOS-Systemprozessen ausblenden (Daemons, XPC-Helper, Framework-Agenten).";
 "Offline" = "Offline";
+"Monitoring Paused" = "Überwachung pausiert";
+"Hide Panel" = "Panel ausblenden";

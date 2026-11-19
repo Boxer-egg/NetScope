@@ -6,6 +6,8 @@ struct MainWindowView: View {
     @State private var leftPanelVisible = true
     @State private var rightPanelVisible = true
     @State private var selectedSource: String = ""
+    @AppStorage("leftPanelWidth") private var leftPanelWidth: Double = 220
+    @AppStorage("rightPanelWidth") private var rightPanelWidth: Double = 280
 
     var body: some View {
         ZStack {
@@ -14,20 +16,24 @@ struct MainWindowView: View {
                 .environmentObject(store.connectionStore)
                 .environmentObject(store.tracerouteStore)
 
-            // Left panel + trigger
+            // Left panel + resizer + trigger
             HStack(spacing: 0) {
                 if leftPanelVisible {
-                    ProcessListView()
-                        .environmentObject(store.connectionStore)
-                        .frame(width: 220)
-                        .background(
-                            Color(NSColor.windowBackgroundColor)
-                                .opacity(0.92)
-                        )
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .leading).combined(with: .opacity),
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
+                    ProcessListView(onCollapse: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { leftPanelVisible = false }
+                    })
+                    .environmentObject(store.connectionStore)
+                    .frame(width: leftPanelWidth)
+                    .background(
+                        Color(NSColor.windowBackgroundColor)
+                            .opacity(0.92)
+                    )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .leading).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+
+                    PanelResizer(width: $leftPanelWidth, range: 180...440)
                 }
 
                 // Left trigger button
@@ -49,7 +55,7 @@ struct MainWindowView: View {
                 Spacer()
             }
 
-            // Right panel + trigger
+            // Right panel + resizer + trigger
             HStack(spacing: 0) {
                 Spacer()
 
@@ -70,18 +76,22 @@ struct MainWindowView: View {
                 }
 
                 if rightPanelVisible {
-                    DetailPanelView()
-                        .environmentObject(store.connectionStore)
-                        .environmentObject(store.tracerouteStore)
-                        .frame(width: 280)
-                        .background(
-                            Color(NSColor.windowBackgroundColor)
-                                .opacity(0.92)
-                        )
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .move(edge: .trailing).combined(with: .opacity)
-                        ))
+                    PanelResizer(width: $rightPanelWidth, range: 240...560)
+
+                    DetailPanelView(onCollapse: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { rightPanelVisible = false }
+                    })
+                    .environmentObject(store.connectionStore)
+                    .environmentObject(store.tracerouteStore)
+                    .frame(width: rightPanelWidth)
+                    .background(
+                        Color(NSColor.windowBackgroundColor)
+                            .opacity(0.92)
+                    )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .trailing).combined(with: .opacity)
+                    ))
                 }
             }
 
@@ -96,11 +106,21 @@ struct MainWindowView: View {
                             .frame(width: 26, height: 20)
                     }
                     .buttonStyle(.plain)
-                    .background(Color(NSColor.controlBackgroundColor).opacity(0.9))
+                    .background(store.isPaused ? Color.orange.opacity(0.85) : Color(NSColor.controlBackgroundColor).opacity(0.9))
                     .cornerRadius(4)
                     .help(store.isPaused
                           ? String(localized: "Resume Monitoring", bundle: .module)
                           : String(localized: "Pause Monitoring", bundle: .module))
+
+                    if store.isPaused {
+                        Text(String(localized: "Monitoring Paused", bundle: .module))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.orange.opacity(0.15))
+                            .cornerRadius(4)
+                    }
 
                     Picker("Data Source", selection: $selectedSource) {
                         ForEach(store.availableDataSources, id: \.self) { source in
@@ -154,5 +174,48 @@ struct MainWindowView: View {
                 rightPanelVisible.toggle()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .init("ToggleLeftPanel"))) { _ in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                leftPanelVisible.toggle()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .init("FocusSearch"))) { _ in
+            leftPanelVisible = true
+        }
+    }
+}
+
+/// A narrow invisible drag strip on a panel's inner edge that resizes it.
+struct PanelResizer: View {
+    @Binding var width: Double
+    let range: ClosedRange<Double>
+
+    @State private var startWidth: Double?
+    @State private var isHovering = false
+
+    var body: some View {
+        Rectangle()
+            .fill(isHovering ? Color.accentColor.opacity(0.5) : Color.clear)
+            .frame(width: 4)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                isHovering = hovering
+                if hovering {
+                    NSCursor.resizeLeftRight.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { value in
+                        if startWidth == nil { startWidth = width }
+                        let delta = value.location.x - value.startLocation.x
+                        width = min(max((startWidth ?? width) + delta, range.lowerBound), range.upperBound)
+                    }
+                    .onEnded { _ in
+                        startWidth = nil
+                    }
+            )
     }
 }

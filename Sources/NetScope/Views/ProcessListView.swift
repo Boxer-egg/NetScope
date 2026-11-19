@@ -3,8 +3,10 @@ import AppKit
 
 struct ProcessListView: View {
     @EnvironmentObject var store: ConnectionStore
+    var onCollapse: (() -> Void)? = nil
     @State private var searchText = ""
     @State private var expandedProcesses: Set<String> = []
+    @FocusState private var searchFocused: Bool
 
     var filteredProcesses: [(name: String, pid: Int, count: Int, colorIndex: Int)] {
         let processes = store.processes
@@ -39,12 +41,26 @@ struct ProcessListView: View {
                     .foregroundColor(.secondary)
                 TextField("Filter processes…", text: $searchText)
                     .textFieldStyle(.plain)
+                    .focused($searchFocused)
+
+                if let onCollapse = onCollapse {
+                    Button(action: onCollapse) {
+                        Image(systemName: "sidebar.leading")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(String(localized: "Hide Panel", bundle: .module))
+                }
             }
             .padding(8)
             .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
             .cornerRadius(6)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
+            .onReceive(NotificationCenter.default.publisher(for: .init("FocusSearch"))) { _ in
+                searchFocused = true
+            }
 
             // "All" row
             Button(action: { store.selectProcess(nil) }) {

@@ -84,3 +84,5 @@
 "Hide System Processes" = "隐藏系统进程";
 "Hide connections owned by macOS system processes (daemons, XPC helpers, framework agents)." = "隐藏 macOS 系统进程（守护进程、XPC 助手、框架代理）拥有的连接。";
 "Offline" = "离线";
+"Monitoring Paused" = "监控已暂停";
+"Hide Panel" = "隐藏面板";
