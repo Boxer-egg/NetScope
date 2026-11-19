@@ -1,46 +1,74 @@
 # NetScope
 
-A macOS network connection monitor with an interactive world map. It shows which apps are connecting to which servers, where those servers are, and traces the network path.
+NetScope 是一个 macOS 网络连接监控工具：实时显示**哪个 App 在连哪些服务器、这些服务器在哪里、网络路径怎么走**，并把它们画在世界地图上。
 
-Built with SwiftUI + MapKit.
+适合想了解自己电脑网络行为的用户：排查哪个应用在偷跑流量、确认数据发到了哪里、观察连接是否稳定。
 
-## Requirements
+## 它能做什么
 
-- macOS 13 Ventura+
-- Xcode 15+ / Swift 5.9+
+- **实时连接监控**：每秒刷新本机所有 TCP/UDP 连接，按进程分组显示上下行速率
+- **世界地图可视化**：连接以弧线画在地图上，按"进程 × 目的地城市"聚合，城市端点有彩色标记，点击标记可筛选对应进程
+- **进程级明细**：每个 App 连了哪些 IP、端口、协议、连接状态、流量速率
+- **地理位置与归属**：显示目标的城市/国家、经纬度、网络运营商（如 AS13335 Cloudflare）、知名端口对应的服务名（443 · HTTPS）
+- **内置 Traceroute**：展开任意连接即可逐跳追踪路由，显示每跳延迟和地理位置，IPv6 自动使用 traceroute6
+- **菜单栏速览**：点菜单栏图标查看最近 2 分钟吞吐曲线、ping 延迟、Top 进程，可一键暂停/退出
+- **数据导出**：连接列表可导出 CSV；进程列表支持按名称/IP 搜索
 
-## Building
+## 构建与运行
 
-```bash
-swift build
-```
-
-Release binary:
+要求 macOS 13+、Xcode 15+。
 
 ```bash
 swift build -c release
-# .build/release/NetScope
+# 二进制位于 .build/release/NetScope
 ```
 
-## GeoLite2 Database
+## 首次使用
 
-The map needs the MaxMind GeoLite2-City database. On first launch, the setup sheet lets you either:
+首次启动会提示安装 MaxMind GeoLite2-City 数据库（地图定位需要），二选一：
 
-1. Drop a downloaded `GeoLite2-City.mmdb` file, or
-2. Enter your MaxMind license key to download it automatically.
+1. 从 [MaxMind](https://www.maxmind.com/en/geolite2/signup) 免费注册下载 `GeoLite2-City.mmdb`，拖入设置窗口；或
+2. 直接填入 MaxMind License Key 自动下载。
 
-The database is saved to `~/Library/Application Support/NetScope/GeoLite2-City.mmdb`.
+也可以点"以后再说"跳过——此时地理位置走在线查询（ip-api.com），地图填充会慢一些。数据库装好后存放于 `~/Library/Application Support/NetScope/`。
 
-## Run Tests
+## 界面怎么用
 
-```bash
-swift test
+```
+┌────────────┬──────────────────────────┬────────────┐
+│  进程列表   │                          │  连接详情   │
+│  (左,可收起)│         世 界 地 图        │  (右,可收起)│
+│            │     弧线=你的连接方向       │            │
+└────────────┴──────────────────────────┴────────────┘
+              顶部工具栏:暂停 / 数据源切换
 ```
 
-## License
+- **左面板**：按进程分组的连接列表，显示实时速率；点进程名在右侧看它的全部连接，点箭头展开看 IP；搜索框支持进程名和 IP；右缘可拖拽调宽，右上角图标可收起
+- **地图**：弧线从你的位置指向目标城市；点击城市标记（显示连接数和主要进程）即选中该进程；左下角按钮缩放/回中
+- **右面板**：摘要（速率、累计流量）、连接状态统计、Top 进程/主机、完整连接列表；连接可排序（流量/主机/端口/状态）、导出 CSV；点击一条连接展开详情和"运行 Traceroute"按钮
+- **顶部工具栏**：暂停按钮（冻结采集，数据不再更新）；数据源切换（NetworkStatistics 为默认，nettop 为兼容备选）
 
-MIT License. The GeoLite2 database is subject to MaxMind's EULA and must be downloaded separately.
+## 快捷键
+
+| 按键 | 作用 |
+|------|------|
+| ⌘F | 聚焦进程搜索框 |
+| ⌘E | 导出连接列表 CSV |
+| ⌘. | 暂停 / 恢复监控 |
+| ⌘⇧L | 显示 / 隐藏左面板 |
+| ⌘⇧D | 显示 / 隐藏右面板 |
+
+## 设置（⌘,）
+
+- **刷新间隔**：1 / 2 / 5 秒
+- **隐藏系统进程**：过滤 mDNSResponder、cloudd 等 macOS 系统守护进程的连接
+- **在线 GeoIP 查询**：关闭后公网 IP 不再发往第三方（ip-api.com），仅使用本地数据库
+- **重新打开 GeoIP 设置向导**
 
 ## 说明
 
-NetScope 目前是一个**半成品**，部分功能仍在完善中，稳定性和边界情况处理有限。
+NetScope 目前是一个**半成品**：部分功能仍在完善中，稳定性和边界情况处理有限（例如本机定位依赖在线查询、nettop 数据源的进程名识别不如系统数据源精确）。欢迎提 issue 和 PR。
+
+## License
+
+MIT License。GeoLite2 数据库受 MaxMind EULA 约束，需单独下载。
