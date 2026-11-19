@@ -86,3 +86,4 @@
 "Offline" = "Offline";
 "Monitoring Paused" = "Überwachung pausiert";
 "Hide Panel" = "Panel ausblenden";
+"%d connections · %@" = "%d Verbindungen · %@";

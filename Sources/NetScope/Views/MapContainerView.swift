@@ -47,7 +47,8 @@ struct MapContainerView: View {
                 selectedProcess: selected,
                 allConnections: all,
                 processColor: { connectionStore.colorForProcess($0) },
-                mapProxy: mapProxy
+                mapProxy: mapProxy,
+                onSelectProcess: { connectionStore.selectProcess($0) }
             )
             .edgesIgnoringSafeArea(.all)
 
@@ -75,7 +76,8 @@ struct MapButton: View {
 
 // MARK: - Connection Overlay
 
-/// One connection arc. The curve is drawn in screen space by ConnectionOverlayRenderer.
+/// One aggregated connection arc (per process and destination city).
+/// The curve is drawn in screen space by ConnectionOverlayRenderer.
 final class ConnectionOverlay: NSObject, MKOverlay {
     let connection: Connection
     let startCoord: CLLocationCoordinate2D
@@ -107,6 +109,18 @@ final class ConnectionOverlay: NSObject, MKOverlay {
         let w = max(maxX - minX, 1), h = max(maxY - minY, 1)
         return MKMapRect(x: minX - w * 0.5, y: minY - h * 0.5, width: w * 2, height: h * 2)
     }
+}
+
+// MARK: - City Annotation
+
+/// Endpoint pin for one destination city (aggregated across processes).
+final class CityAnnotation: NSObject, MKAnnotation {
+    var cityKey = ""
+    var topProcess = ""
+    var pinColor: NSColor = .systemGray
+    dynamic var coordinate: CLLocationCoordinate2D = CLLocationCoordinate2D()
+    dynamic var title: String?
+    dynamic var subtitle: String?
 }
 
 // MARK: - Connection Overlay Renderer
@@ -156,6 +170,7 @@ struct MapViewRepresentable: NSViewRepresentable {
     let allConnections: [Connection]
     let processColor: (String) -> String
     let mapProxy: MapViewProxy
+    let onSelectProcess: (String) -> Void
 
     func makeNSView(context: Context) -> MKMapView {
         let mv = MKMapView()
@@ -173,7 +188,8 @@ struct MapViewRepresentable: NSViewRepresentable {
             connections: connections,
             selectedProcess: selectedProcess,
             allConnections: allConnections,
-            processColor: processColor
+            processColor: processColor,
+            onSelectProcess: onSelectProcess
         )
     }
 
@@ -182,19 +198,25 @@ struct MapViewRepresentable: NSViewRepresentable {
     class Coordinator: NSObject, MKMapViewDelegate {
         weak var mapProxy: MapViewProxy?
         private var currentOverlays: [String: ConnectionOverlay] = [:]
-        private var lastConnectionIDs: Set<String> = []
+        private var currentAnnotations: [String: CityAnnotation] = [:]
+        private var lastArcKeys: Set<String> = []
+        private var lastCityKeys: Set<String> = []
         private var lastSelectedProcess: String? = nil
         private var localCoordinate = CLLocationCoordinate2D(latitude: 39.9, longitude: 116.4)
         private var didInit = false
         private weak var mapViewRef: MKMapView?
         private var userInteracted = false
+        private var onSelectProcess: ((String) -> Void)?
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             userInteracted = true
         }
 
         func update(mapView: MKMapView, connections: [Connection], selectedProcess: String?,
-                    allConnections: [Connection], processColor: (String) -> String) {
+                    allConnections: [Connection], processColor: (String) -> String,
+                    onSelectProcess: @escaping (String) -> Void) {
+            self.onSelectProcess = onSelectProcess
+
             if !didInit {
                 didInit = true
                 mapViewRef = mapView
@@ -205,26 +227,59 @@ struct MapViewRepresentable: NSViewRepresentable {
             }
 
             let connsToShow = (selectedProcess == nil) ? allConnections : connections
-            let visibleIDs = Set(connsToShow.compactMap { $0.geoInfo != nil ? $0.id : nil })
-            let selectionChanged = lastSelectedProcess != selectedProcess
-            let connectionsChanged = lastConnectionIDs != visibleIDs
 
-            guard connectionsChanged || selectionChanged else { return }
-
-            var newMap: [String: ConnectionOverlay] = [:]
+            // Group arcs by (process, destination city) and pins by city
+            var arcSeeds: [String: Connection] = [:]
+            var cities: [String: (coord: CLLocationCoordinate2D, title: String, count: Int,
+                                  topProcess: String, topCount: Int)] = [:]
+            var cityProcessCounts: [String: [String: Int]] = [:]
 
             for conn in connsToShow {
                 guard let geo = conn.geoInfo, conn.remoteIP != "*" else { continue }
+                let cityKey = Self.cityKey(for: geo)
+                let arcKey = conn.processName + "|" + cityKey
+                if arcSeeds[arcKey] == nil { arcSeeds[arcKey] = conn }
+
+                var entry = cities[cityKey] ?? (
+                    coord: geo.coordinate,
+                    title: Self.cityTitle(for: geo),
+                    count: 0,
+                    topProcess: conn.processName,
+                    topCount: 0
+                )
+                entry.count += 1
+
+                var counts = cityProcessCounts[cityKey] ?? [:]
+                let processCount = (counts[conn.processName] ?? 0) + 1
+                counts[conn.processName] = processCount
+                cityProcessCounts[cityKey] = counts
+                if processCount > entry.topCount {
+                    entry.topProcess = conn.processName
+                    entry.topCount = processCount
+                }
+                cities[cityKey] = entry
+            }
+
+            let selectionChanged = lastSelectedProcess != selectedProcess
+            let arcsChanged = lastArcKeys != Set(arcSeeds.keys)
+            let citiesChanged = lastCityKeys != Set(cities.keys)
+
+            guard arcsChanged || citiesChanged || selectionChanged else { return }
+
+            // Arc overlays
+            var newMap: [String: ConnectionOverlay] = [:]
+            for (arcKey, conn) in arcSeeds {
+                guard let geo = conn.geoInfo else { continue }
                 let isSelected = selectedProcess == nil || conn.processName == selectedProcess
                 let color = NSColor(hex: processColor(conn.processName)) ?? .systemBlue
                 let alpha: CGFloat = isSelected ? 0.7 : 0.2
 
-                if let existing = currentOverlays[conn.id] {
+                if let existing = currentOverlays[arcKey] {
                     existing.strokeColor = color
                     existing.overlayAlpha = alpha
-                    newMap[conn.id] = existing
+                    newMap[arcKey] = existing
                 } else {
-                    newMap[conn.id] = ConnectionOverlay(
+                    newMap[arcKey] = ConnectionOverlay(
                         connection: conn,
                         from: localCoordinate,
                         to: geo.coordinate,
@@ -234,21 +289,55 @@ struct MapViewRepresentable: NSViewRepresentable {
                 }
             }
 
-            for (id, ov) in currentOverlays where newMap[id] == nil {
-                mapView.removeOverlay(ov)
+            for (key, overlay) in currentOverlays where newMap[key] == nil {
+                mapView.removeOverlay(overlay)
             }
-
-            let toAdd = newMap.values.filter { currentOverlays[$0.connection.id] == nil }
-            if !toAdd.isEmpty { mapView.addOverlays(Array(toAdd)) }
+            let overlaysToAdd = newMap.filter { currentOverlays[$0.key] == nil }.map { $0.value }
+            if !overlaysToAdd.isEmpty { mapView.addOverlays(overlaysToAdd) }
 
             if selectionChanged {
-                for ov in newMap.values {
-                    mapView.renderer(for: ov)?.setNeedsDisplay()
+                for overlay in newMap.values {
+                    mapView.renderer(for: overlay)?.setNeedsDisplay()
                 }
             }
 
+            // City endpoint pins
+            var newAnnotations: [String: CityAnnotation] = [:]
+            for (cityKey, info) in cities {
+                let subtitle = String(format: String(localized: "%d connections · %@", bundle: .module),
+                                      info.count, info.topProcess)
+                let color = NSColor(hex: processColor(info.topProcess)) ?? .systemGray
+                if let existing = currentAnnotations[cityKey] {
+                    existing.title = info.title
+                    existing.subtitle = subtitle
+                    existing.coordinate = info.coord
+                    existing.pinColor = color
+                    if let marker = mapView.view(for: existing) as? MKMarkerAnnotationView {
+                        marker.markerTintColor = color
+                    }
+                    newAnnotations[cityKey] = existing
+                } else {
+                    let annotation = CityAnnotation()
+                    annotation.cityKey = cityKey
+                    annotation.topProcess = info.topProcess
+                    annotation.pinColor = color
+                    annotation.coordinate = info.coord
+                    annotation.title = info.title
+                    annotation.subtitle = subtitle
+                    newAnnotations[cityKey] = annotation
+                }
+            }
+
+            for (key, annotation) in currentAnnotations where newAnnotations[key] == nil {
+                mapView.removeAnnotation(annotation)
+            }
+            let annotationsToAdd = newAnnotations.values.filter { currentAnnotations[$0.cityKey] == nil }
+            if !annotationsToAdd.isEmpty { mapView.addAnnotations(Array(annotationsToAdd)) }
+
             currentOverlays = newMap
-            lastConnectionIDs = visibleIDs
+            currentAnnotations = newAnnotations
+            lastArcKeys = Set(arcSeeds.keys)
+            lastCityKeys = Set(cities.keys)
             lastSelectedProcess = selectedProcess
         }
 
@@ -257,6 +346,37 @@ struct MapViewRepresentable: NSViewRepresentable {
                 return ConnectionOverlayRenderer(connOverlay)
             }
             return MKOverlayRenderer(overlay: overlay)
+        }
+
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            guard let city = annotation as? CityAnnotation else { return nil }
+            let identifier = "CityPin"
+            let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)
+                ?? MKMarkerAnnotationView(annotation: city, reuseIdentifier: identifier)
+            view.annotation = city
+            view.canShowCallout = true
+            view.markerTintColor = city.pinColor
+            view.titleVisibility = .adaptive
+            return view
+        }
+
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            guard let city = view.annotation as? CityAnnotation else { return }
+            onSelectProcess?(city.topProcess)
+        }
+
+        static func cityKey(for geo: GeoInfo) -> String {
+            if let city = geo.city, !city.isEmpty {
+                return "\(city)|\(geo.country)"
+            }
+            return String(format: "%.1f|%.1f", geo.latitude, geo.longitude)
+        }
+
+        static func cityTitle(for geo: GeoInfo) -> String {
+            if let city = geo.city, !city.isEmpty {
+                return "\(city), \(geo.country)"
+            }
+            return geo.country
         }
 
         private func resolveOwnLocation() {
@@ -269,11 +389,13 @@ struct MapViewRepresentable: NSViewRepresentable {
                     if !self.userInteracted {
                         self.mapProxy?.recenterToOrigin()
                     }
-                    self.lastConnectionIDs = []
+                    self.lastArcKeys = []
+                    self.lastCityKeys = []
                     if let mapView = self.mapViewRef {
-                        let overlays = mapView.overlays
-                        mapView.removeOverlays(overlays)
+                        mapView.removeOverlays(mapView.overlays)
+                        mapView.removeAnnotations(mapView.annotations)
                         self.currentOverlays = [:]
+                        self.currentAnnotations = [:]
                     }
                 }
             }

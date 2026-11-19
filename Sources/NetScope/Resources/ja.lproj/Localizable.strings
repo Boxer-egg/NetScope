@@ -86,3 +86,4 @@
 "Offline" = "オフライン";
 "Monitoring Paused" = "モニタリング一時停止中";
 "Hide Panel" = "パネルを隠す";
+"%d connections · %@" = "%d 件の接続 · %@";

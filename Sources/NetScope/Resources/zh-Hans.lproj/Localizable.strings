@@ -86,3 +86,4 @@
 "Offline" = "离线";
 "Monitoring Paused" = "监控已暂停";
 "Hide Panel" = "隐藏面板";
+"%d connections · %@" = "%d 条连接 · %@";
